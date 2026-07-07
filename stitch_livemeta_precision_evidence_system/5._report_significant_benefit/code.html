@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>LiveMeta - Report</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400&amp;family=Source+Serif+4:opsz,wght@8..60,400&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-variant": "#e2e2e2",
+                        "surface-container": "#eeeeee",
+                        "secondary-fixed-dim": "#b4c5ff",
+                        "on-primary-fixed-variant": "#454747",
+                        "surface-container-high": "#e8e8e8",
+                        "inverse-on-surface": "#f1f1f1",
+                        "surface-tint": "#5d5f5e",
+                        "outline-variant": "#c4c7c7",
+                        "outline": "#747878",
+                        "error-container": "#ffdad6",
+                        "on-error": "#ffffff",
+                        "on-secondary-fixed-variant": "#003ea8",
+                        "on-secondary-fixed": "#00174b",
+                        "tertiary": "#000000",
+                        "on-background": "#1a1c1c",
+                        "on-tertiary-fixed-variant": "#454747",
+                        "on-secondary-container": "#fefcff",
+                        "inverse-surface": "#2f3131",
+                        "on-primary-fixed": "#1a1c1c",
+                        "tertiary-container": "#1a1c1c",
+                        "surface-container-lowest": "#ffffff",
+                        "surface-bright": "#f9f9f9",
+                        "primary-fixed-dim": "#c6c6c6",
+                        "on-tertiary": "#ffffff",
+                        "on-error-container": "#93000a",
+                        "tertiary-fixed-dim": "#c6c6c6",
+                        "surface-dim": "#dadada",
+                        "surface-container-low": "#f3f3f3",
+                        "primary": "#000000",
+                        "on-primary": "#ffffff",
+                        "on-secondary": "#ffffff",
+                        "on-surface": "#1a1c1c",
+                        "secondary": "#0051d5",
+                        "inverse-primary": "#c6c6c6",
+                        "primary-fixed": "#e2e2e2",
+                        "surface-container-highest": "#e2e2e2",
+                        "tertiary-fixed": "#e2e2e2",
+                        "secondary-fixed": "#dbe1ff",
+                        "on-surface-variant": "#434747",
+                        "background": "#f9f9f9",
+                        "on-tertiary-fixed": "#1a1c1c",
+                        "secondary-container": "#316bf3",
+                        "on-tertiary-container": "#838484",
+                        "primary-container": "#1a1c1c",
+                        "error": "#ba1a1a",
+                        "surface": "#f9f9f9",
+                        "on-primary-container": "#838484"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "sm": "8px",
+                        "lg": "16px",
+                        "xl": "24px",
+                        "md": "12px",
+                        "margin-mobile": "16px",
+                        "xs": "4px",
+                        "gutter": "24px",
+                        "xxl": "32px",
+                        "margin-desktop": "32px"
+                    },
+                    "fontFamily": {
+                        "section-sm": ["Inter"],
+                        "clinical-conclusion": ["\"Source Serif 4\""],
+                        "body-md": ["Inter"],
+                        "headline-md": ["Inter"],
+                        "data-mono": ["JetBrains Mono"],
+                        "label-caps": ["Inter"],
+                        "display-lg": ["Inter"]
+                    },
+                    "fontSize": {
+                        "section-sm": ["16px", { "lineHeight": "24px", "fontWeight": "500" }],
+                        "clinical-conclusion": ["18px", { "lineHeight": "28px", "fontWeight": "400" }],
+                        "body-md": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "headline-md": ["20px", { "lineHeight": "28px", "fontWeight": "500" }],
+                        "data-mono": ["13px", { "lineHeight": "18px", "fontWeight": "400" }],
+                        "label-caps": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600" }],
+                        "display-lg": ["32px", { "lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "600" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-background text-on-background min-h-screen flex">
+<!-- SideNavBar (Shared Component Blueprint) -->
+<nav class="hidden md:flex bg-surface-container-low border-r border-outline-variant h-screen w-64 fixed left-0 top-0 flex-col py-xl z-50">
+<div class="px-xl mb-xxl flex items-center gap-md">
+<div class="w-8 h-8 bg-primary rounded flex items-center justify-center text-on-primary font-headline-md font-bold">L</div>
+<div>
+<h1 class="font-headline-md text-headline-md text-on-surface">LiveMeta</h1>
+<p class="font-label-caps text-label-caps text-on-surface-variant">Clinical Terminal</p>
+</div>
+</div>
+<div class="flex-1 px-lg">
+<div class="flex flex-col gap-sm">
+<!-- Ask -->
+<a class="flex items-center gap-md px-md py-sm rounded text-on-surface-variant hover:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined text-lg" data-icon="help_outline">help_outline</span>
+<span class="font-label-caps text-label-caps">Ask</span>
+</a>
+<!-- Evidence -->
+<a class="flex items-center gap-md px-md py-sm rounded text-on-surface-variant hover:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined text-lg" data-icon="database">database</span>
+<span class="font-label-caps text-label-caps">Evidence</span>
+</a>
+<!-- Report (ACTIVE) -->
+<a class="flex items-center gap-md px-md py-sm rounded bg-surface-container-high text-secondary border-r-2 border-secondary scale-95 transition-transform" href="#" style="transform-origin: left;">
+<span class="material-symbols-outlined text-lg" data-icon="description" data-weight="fill" style="font-variation-settings: 'FILL' 1;">description</span>
+<span class="font-label-caps text-label-caps font-bold">Report</span>
+</a>
+<!-- Updates -->
+<a class="flex items-center gap-md px-md py-sm rounded text-on-surface-variant hover:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined text-lg" data-icon="sync">sync</span>
+<span class="font-label-caps text-label-caps">Updates</span>
+</a>
+</div>
+</div>
+<div class="px-lg mt-auto pt-xl border-t border-outline-variant/30">
+<div class="flex flex-col gap-sm">
+<a class="flex items-center gap-md px-md py-sm rounded text-on-surface-variant hover:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined text-lg opacity-70" data-icon="gavel">gavel</span>
+<span class="font-label-caps text-label-caps opacity-70">Risk of Bias</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm rounded text-on-surface-variant hover:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined text-lg opacity-70" data-icon="analytics">analytics</span>
+<span class="font-label-caps text-label-caps opacity-70">GRADE Detail</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm rounded text-on-surface-variant hover:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined text-lg opacity-70" data-icon="history">history</span>
+<span class="font-label-caps text-label-caps opacity-70">Audit Trail</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm rounded text-on-surface-variant hover:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined text-lg opacity-70" data-icon="download">download</span>
+<span class="font-label-caps text-label-caps opacity-70">Export</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm rounded text-on-surface-variant hover:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined text-lg opacity-70" data-icon="settings">settings</span>
+<span class="font-label-caps text-label-caps opacity-70">Settings</span>
+</a>
+</div>
+</div>
+</nav>
+<!-- Main Content Area -->
+<main class="flex-1 ml-0 md:ml-64 p-margin-mobile md:p-margin-desktop bg-surface flex flex-col xl:flex-row gap-gutter">
+<!-- Left Column: Hero & Data -->
+<div class="flex-1 flex flex-col gap-xxl">
+<!-- Report Hero Banner -->
+<section class="bg-surface-container-lowest border border-outline-variant p-xl rounded-lg">
+<div class="flex justify-between items-start mb-lg">
+<div class="flex items-center gap-sm">
+<span class="w-4 h-4 rounded-full bg-green-600 inline-block border border-outline-variant"></span>
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-wider">High Certainty</span>
+</div>
+<div class="flex gap-1" title="GRADE High">
+<!-- Pip meter (4/4 filled) -->
+<div class="w-3 h-3 bg-secondary border border-secondary rounded-sm"></div>
+<div class="w-3 h-3 bg-secondary border border-secondary rounded-sm"></div>
+<div class="w-3 h-3 bg-secondary border border-secondary rounded-sm"></div>
+<div class="w-3 h-3 bg-secondary border border-secondary rounded-sm"></div>
+</div>
+</div>
+<div class="mb-xl">
+<h2 class="font-clinical-conclusion text-clinical-conclusion text-on-surface leading-relaxed text-2xl md:text-[28px] max-w-3xl">
+                        "About 40 fewer events per 1000."
+                    </h2>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-xl border-t border-outline-variant/50 pt-lg">
+<!-- Relative Effect -->
+<div>
+<p class="font-label-caps text-label-caps text-on-surface-variant mb-xs">Pooled Estimate (RR)</p>
+<p class="font-data-mono text-data-mono text-lg text-on-surface bg-surface-container-low px-md py-sm rounded inline-block border border-outline-variant/30">
+                            0.81 <span class="text-on-surface-variant text-sm">[95% CI 0.74–0.88]</span>
+</p>
+</div>
+<!-- Absolute Effect -->
+<div>
+<p class="font-label-caps text-label-caps text-on-surface-variant mb-xs">Absolute Effect (per 1000)</p>
+<div class="flex items-center gap-sm bg-surface-container-low px-md py-sm rounded inline-block border border-outline-variant/30">
+<span class="font-data-mono text-data-mono text-on-surface-variant line-through opacity-70">212</span>
+<span class="material-symbols-outlined text-sm text-on-surface-variant" data-icon="arrow_right_alt">arrow_right_alt</span>
+<span class="font-data-mono text-data-mono text-on-surface font-semibold">172</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Forest Plot & Stats -->
+<section class="bg-surface-container-lowest border border-outline-variant rounded-lg p-xl flex flex-col gap-lg">
+<div class="flex justify-between items-end border-b border-outline-variant pb-md">
+<h3 class="font-section-sm text-section-sm text-on-surface">Forest Plot</h3>
+<!-- Heterogeneity stats -->
+<div class="flex gap-md font-data-mono text-data-mono text-xs text-on-surface-variant">
+<span>I² 17%</span>
+<span>τ² 0.0007</span>
+<span>Q 1.20 (p 0.27)</span>
+</div>
+</div>
+<!-- Abstracted Forest Plot Visualization -->
+<div class="relative w-full h-48 border border-outline-variant/30 bg-surface-container-low/50 mt-sm flex flex-col justify-center px-xl py-lg">
+<!-- Log x-axis guides -->
+<div class="absolute top-0 bottom-0 left-0 right-0 flex justify-between px-xl pointer-events-none opacity-20">
+<div class="w-px h-full bg-outline border-dashed"></div>
+<div class="w-px h-full bg-outline border-dashed"></div>
+<!-- No effect line -->
+<div class="w-px h-full bg-on-surface border-solid opacity-50 z-10" style="margin-left: 20%;"></div>
+<div class="w-px h-full bg-outline border-dashed"></div>
+<div class="w-px h-full bg-outline border-dashed"></div>
+</div>
+<!-- Trial 1: DAPA-HF -->
+<div class="relative w-full h-10 flex items-center z-20 mb-md">
+<div class="w-32 font-label-caps text-label-caps text-on-surface">DAPA-HF</div>
+<div class="flex-1 relative h-full flex items-center">
+<!-- Whiskers -->
+<div class="absolute h-px bg-on-surface w-[40%] left-[10%]"></div>
+<!-- Square (sized by weight) -->
+<div class="absolute w-4 h-4 bg-on-surface border border-surface-container-lowest left-[25%] -ml-2"></div>
+</div>
+</div>
+<!-- Trial 2: DELIVER -->
+<div class="relative w-full h-10 flex items-center z-20 mb-lg">
+<div class="w-32 font-label-caps text-label-caps text-on-surface">DELIVER</div>
+<div class="flex-1 relative h-full flex items-center">
+<!-- Whiskers -->
+<div class="absolute h-px bg-on-surface w-[30%] left-[20%]"></div>
+<!-- Square (sized by weight) -->
+<div class="absolute w-5 h-5 bg-on-surface border border-surface-container-lowest left-[32%] -ml-2.5"></div>
+</div>
+</div>
+<!-- Pooled Estimate -->
+<div class="relative w-full h-12 flex items-center z-20 border-t border-outline-variant/30 pt-md">
+<div class="w-32 font-label-caps text-label-caps text-on-surface font-bold">Pooled</div>
+<div class="flex-1 relative h-full flex items-center">
+<!-- Blue Diamond -->
+<div class="absolute w-6 h-6 bg-[#2563EB] transform rotate-45 left-[28%] -ml-3"></div>
+</div>
+</div>
+</div>
+</section>
+</div>
+<!-- Right Column: Provenance Drawer -->
+<aside class="w-full xl:w-80 flex-shrink-0 bg-surface-container-lowest border border-outline-variant rounded-lg p-lg h-fit">
+<div class="flex items-center gap-sm mb-lg border-b border-outline-variant pb-sm">
+<span class="material-symbols-outlined text-on-surface-variant text-lg" data-icon="policy">policy</span>
+<h3 class="font-section-sm text-section-sm text-on-surface">Provenance</h3>
+</div>
+<div class="flex flex-col gap-md">
+<!-- Source 1 -->
+<div class="bg-surface-container-low p-md rounded border border-outline-variant/50">
+<div class="flex justify-between items-start mb-xs">
+<span class="font-label-caps text-label-caps text-on-surface">Trial Details</span>
+<a class="text-secondary hover:underline" href="#"><span class="material-symbols-outlined text-sm" data-icon="open_in_new">open_in_new</span></a>
+</div>
+<div class="font-data-mono text-data-mono text-xs text-on-surface-variant flex flex-col gap-xs mt-sm">
+<div class="flex justify-between"><span class="opacity-70">ID:</span> <span>NCT03036124</span></div>
+<div class="flex justify-between"><span class="opacity-70">Acronym:</span> <span>DAPA-HF</span></div>
+<div class="flex justify-between"><span class="opacity-70">Phase:</span> <span>3</span></div>
+</div>
+</div>
+<!-- Source 2 -->
+<div class="bg-surface-container-low p-md rounded border border-outline-variant/50">
+<div class="flex justify-between items-start mb-xs">
+<span class="font-label-caps text-label-caps text-on-surface">Trial Details</span>
+<a class="text-secondary hover:underline" href="#"><span class="material-symbols-outlined text-sm" data-icon="open_in_new">open_in_new</span></a>
+</div>
+<div class="font-data-mono text-data-mono text-xs text-on-surface-variant flex flex-col gap-xs mt-sm">
+<div class="flex justify-between"><span class="opacity-70">ID:</span> <span>NCT03619213</span></div>
+<div class="flex justify-between"><span class="opacity-70">Acronym:</span> <span>DELIVER</span></div>
+<div class="flex justify-between"><span class="opacity-70">Phase:</span> <span>3</span></div>
+</div>
+</div>
+</div>
+</aside>
+</main>
+</body></html>

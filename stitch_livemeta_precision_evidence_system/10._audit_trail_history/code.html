@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>LiveMeta - Audit Trail</title>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@400&amp;family=Source+Serif+4:wght@400&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind Config -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-variant": "#e2e2e2",
+                        "surface-container": "#eeeeee",
+                        "secondary-fixed-dim": "#b4c5ff",
+                        "on-primary-fixed-variant": "#454747",
+                        "surface-container-high": "#e8e8e8",
+                        "inverse-on-surface": "#f1f1f1",
+                        "surface-tint": "#5d5f5e",
+                        "outline-variant": "#c4c7c7",
+                        "outline": "#747878",
+                        "error-container": "#ffdad6",
+                        "on-error": "#ffffff",
+                        "on-secondary-fixed-variant": "#003ea8",
+                        "on-secondary-fixed": "#00174b",
+                        "tertiary": "#000000",
+                        "on-background": "#1a1c1c",
+                        "on-tertiary-fixed-variant": "#454747",
+                        "on-secondary-container": "#fefcff",
+                        "inverse-surface": "#2f3131",
+                        "on-primary-fixed": "#1a1c1c",
+                        "tertiary-container": "#1a1c1c",
+                        "surface-container-lowest": "#ffffff",
+                        "surface-bright": "#f9f9f9",
+                        "primary-fixed-dim": "#c6c6c6",
+                        "on-tertiary": "#ffffff",
+                        "on-error-container": "#93000a",
+                        "tertiary-fixed-dim": "#c6c6c6",
+                        "surface-dim": "#dadada",
+                        "surface-container-low": "#f3f3f3",
+                        "primary": "#000000",
+                        "on-primary": "#ffffff",
+                        "on-secondary": "#ffffff",
+                        "on-surface": "#1a1c1c",
+                        "secondary": "#0051d5",
+                        "inverse-primary": "#c6c6c6",
+                        "primary-fixed": "#e2e2e2",
+                        "surface-container-highest": "#e2e2e2",
+                        "tertiary-fixed": "#e2e2e2",
+                        "secondary-fixed": "#dbe1ff",
+                        "on-surface-variant": "#434747",
+                        "background": "#f9f9f9",
+                        "on-tertiary-fixed": "#1a1c1c",
+                        "secondary-container": "#316bf3",
+                        "on-tertiary-container": "#838484",
+                        "primary-container": "#1a1c1c",
+                        "error": "#ba1a1a",
+                        "surface": "#f9f9f9",
+                        "on-primary-container": "#838484"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "sm": "8px",
+                        "lg": "16px",
+                        "xl": "24px",
+                        "md": "12px",
+                        "margin-mobile": "16px",
+                        "xs": "4px",
+                        "gutter": "24px",
+                        "xxl": "32px",
+                        "margin-desktop": "32px"
+                    },
+                    "fontFamily": {
+                        "section-sm": ["Inter"],
+                        "clinical-conclusion": ["\"Source Serif 4\""],
+                        "body-md": ["Inter"],
+                        "headline-md": ["Inter"],
+                        "data-mono": ["JetBrains Mono"],
+                        "label-caps": ["Inter"],
+                        "display-lg": ["Inter"]
+                    },
+                    "fontSize": {
+                        "section-sm": ["16px", { "lineHeight": "24px", "fontWeight": "500" }],
+                        "clinical-conclusion": ["18px", { "lineHeight": "28px", "fontWeight": "400" }],
+                        "body-md": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "headline-md": ["20px", { "lineHeight": "28px", "fontWeight": "500" }],
+                        "data-mono": ["13px", { "lineHeight": "18px", "fontWeight": "400" }],
+                        "label-caps": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600" }],
+                        "display-lg": ["32px", { "lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "600" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        /* Shared Components Styles */
+        .hairline-b { border-bottom: 0.5px solid var(--tw-colors-outline-variant, #c4c7c7); }
+        .hairline-r { border-right: 0.5px solid var(--tw-colors-outline-variant, #c4c7c7); }
+        .hairline-t { border-top: 0.5px solid var(--tw-colors-outline-variant, #c4c7c7); }
+    </style>
+</head>
+<body class="bg-surface text-on-surface font-body-md text-body-md antialiased min-h-screen flex flex-col md:flex-row">
+<!-- TopNavBar (Mobile) -->
+<header class="md:hidden fixed top-0 w-full z-50 flex justify-between items-center px-lg h-16 bg-surface border-b border-outline-variant flat no shadows">
+<div class="flex items-center gap-sm">
+<span class="text-headline-md font-headline-md font-bold text-on-surface">LiveMeta</span>
+</div>
+<div class="flex items-center gap-sm">
+<button aria-label="dark_mode" class="p-2 text-on-surface-variant hover:bg-surface-container transition-colors rounded-full">
+<span class="material-symbols-outlined">dark_mode</span>
+</button>
+<button aria-label="notifications" class="p-2 text-on-surface-variant hover:bg-surface-container transition-colors rounded-full">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="ml-2 w-8 h-8 rounded-full overflow-hidden hairline-r hairline-b hairline-t border-l border-outline-variant">
+<img alt="User Avatar" class="w-full h-full object-cover" data-alt="A small, professional headshot of a clinical researcher. Light grey background. The researcher is wearing a dark, minimal outfit. Studio lighting, sharp focus. The mood is serious and authoritative. High quality, clear features." src="https://lh3.googleusercontent.com/aida-public/AB6AXuASvqcb7FtZ5-z27Tz3WrQZWlOKbd1IeqWliTZg13niTQJFwDO_5mwxEcZxKT6J5MKBQMTwiQCl7vJLZgptuBNQBIoRvIzTt0cH_qLYpQvtkVnhWRjOtVqdARQPwN_SlJy7sQWeXLD2UaToV6LRiyin41Xavq4B3T2VVYdK31TPXq01vS6k1gzfRBSZSdG5vI5Imbb6gHPe6e0N70JT23BYBx4J8e8Py1M3kZ-MPrgYn5k7rIrWrMlj"/>
+</button>
+</div>
+</header>
+<!-- SideNavBar (Desktop) -->
+<nav class="hidden md:flex fixed left-0 top-0 h-full w-64 flex-col py-xl bg-surface-container-low border-r border-outline-variant flat no shadows z-40">
+<!-- Header -->
+<div class="px-xl mb-xxl flex flex-col items-start">
+<div class="flex items-center gap-sm mb-xs">
+<div class="w-8 h-8 rounded-full overflow-hidden border border-outline-variant shrink-0">
+<img alt="LiveMeta Logo" class="w-full h-full object-cover" data-alt="A stylized, minimalist logo for a medical data terminal called LiveMeta. Monochromatic icon on a very light grey background. Sharp lines, technical aesthetic, conveying precision and clinical truth. No text in the image itself, just the symbol." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBy3dBQmK4Ado99Q-yiCJWgsl9qA9d1KOx_wvFCxtmEP9Yl6HaHDBUUJHv3IeJMue_Q_neaC6FEndv5gTW3q-Ky27vcFna6id1sCDa1HqPTFUIechK61h33wNChqnx03xN3ruB32VqMq05MNidC34Gj_E_bsKMGGdsmGBxK703NQOrM_-8voQDh2Au9hhAL3YWQubEG0nGCU2BrktMzanct9OU88FOifMXkSeCfSh6s_uxpYtvu4Jxc"/>
+</div>
+<span class="font-headline-md text-headline-md text-on-surface font-bold">LiveMeta</span>
+</div>
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase ml-10">Clinical Terminal</span>
+</div>
+<!-- Main Tabs -->
+<div class="flex-1 px-sm">
+<a class="flex items-center gap-md px-lg py-md mb-xs rounded text-on-surface-variant hover:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined text-[20px]">help_outline</span>
+<span class="font-label-caps text-label-caps uppercase">Ask</span>
+</a>
+<a class="flex items-center gap-md px-lg py-md mb-xs rounded text-on-surface-variant hover:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined text-[20px]">database</span>
+<span class="font-label-caps text-label-caps uppercase">Evidence</span>
+</a>
+<a class="flex items-center gap-md px-lg py-md mb-xs rounded text-on-surface-variant hover:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined text-[20px]">description</span>
+<span class="font-label-caps text-label-caps uppercase">Report</span>
+</a>
+<a class="flex items-center gap-md px-lg py-md mb-xs rounded text-on-surface-variant hover:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined text-[20px]">sync</span>
+<span class="font-label-caps text-label-caps uppercase">Updates</span>
+</a>
+</div>
+<!-- Footer Tabs (Audit Trail is Active) -->
+<div class="px-sm mt-auto pt-xl hairline-t">
+<a class="flex items-center gap-md px-lg py-md mb-xs rounded text-on-surface-variant hover:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined text-[20px]">gavel</span>
+<span class="font-label-caps text-label-caps uppercase">Risk of Bias</span>
+</a>
+<a class="flex items-center gap-md px-lg py-md mb-xs rounded text-on-surface-variant hover:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined text-[20px]">analytics</span>
+<span class="font-label-caps text-label-caps uppercase">GRADE Detail</span>
+</a>
+<!-- Active State -->
+<a class="flex items-center gap-md px-lg py-md mb-xs rounded bg-surface-container-high text-secondary border-r-2 border-secondary scale-95 transition-transform" href="#">
+<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 1;">history</span>
+<span class="font-label-caps text-label-caps uppercase font-bold">Audit Trail</span>
+</a>
+<a class="flex items-center gap-md px-lg py-md mb-xs rounded text-on-surface-variant hover:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined text-[20px]">download</span>
+<span class="font-label-caps text-label-caps uppercase">Export</span>
+</a>
+<a class="flex items-center gap-md px-lg py-md mb-xs rounded text-on-surface-variant hover:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined text-[20px]">settings</span>
+<span class="font-label-caps text-label-caps uppercase">Settings</span>
+</a>
+</div>
+</nav>
+<!-- Main Content Canvas -->
+<main class="flex-1 md:ml-64 pt-16 md:pt-0 p-margin-mobile md:p-margin-desktop bg-surface min-h-screen flex justify-center">
+<div class="w-full max-w-4xl max-w-[800px]">
+<!-- Page Header -->
+<header class="mb-xxl flex justify-between items-end border-b-2 border-primary pb-sm">
+<div>
+<h1 class="font-display-lg text-display-lg text-on-background">Audit Trail</h1>
+<p class="text-on-surface-variant mt-sm">Chronological run history and snapshots.</p>
+</div>
+<div class="hidden md:flex gap-sm">
+<button class="flex items-center gap-xs px-md py-sm border border-outline-variant rounded text-on-surface hover:bg-surface-container-high transition-opacity opacity-90">
+<span class="material-symbols-outlined text-[18px]">filter_list</span>
+<span class="font-label-caps text-label-caps">Filter</span>
+</button>
+<button class="flex items-center gap-xs px-md py-sm bg-primary text-on-primary rounded hover:opacity-90 transition-opacity">
+<span class="material-symbols-outlined text-[18px]">add</span>
+<span class="font-label-caps text-label-caps">New Run</span>
+</button>
+</div>
+</header>
+<!-- Data Table Container -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-lg overflow-hidden mb-xxl">
+<div class="absolute inset-0 pointer-events-none ring-2 ring-[#2563EB] ring-offset-2 opacity-0 group-focus-within:opacity-100 z-10"></div><div class="absolute inset-0 pointer-events-none ring-2 ring-[#2563EB] ring-offset-2 opacity-0 group-focus-within:opacity-100 z-10"></div><div class="absolute inset-0 pointer-events-none ring-2 ring-[#2563EB] ring-offset-2 opacity-0 group-focus-within:opacity-100 z-10"></div><table class="w-full text-left border-collapse">
+<thead class="bg-surface-container-low hairline-b">
+<tr>
+<th class="py-md px-lg font-label-caps text-label-caps text-on-surface-variant uppercase w-1/4">Date</th>
+<th class="py-md px-lg font-label-caps text-label-caps text-on-surface-variant uppercase w-1/2">Run Snapshot</th>
+<th class="py-md px-lg font-label-caps text-label-caps text-on-surface-variant uppercase w-1/4 text-right">Status</th>
+<th class="py-md px-md w-10"></th>
+</tr>
+</thead>
+<tbody>
+<!-- Run 3 (Current) -->
+<tr class="group hover:bg-surface-container-lowest hairline-b cursor-pointer transition-colors relative">
+<!-- Focus ring structural div, hidden by default -->
+<td class="py-lg px-lg">
+<span class="font-data-mono text-data-mono text-on-surface">2023-11-15</span>
+</td>
+<td class="py-lg px-lg">
+<a class="flex flex-col focus:outline-none" href="#">
+<span class="font-section-sm text-section-sm text-on-background group-hover:text-secondary transition-colors">Run 3</span>
+<span class="text-on-surface-variant text-sm mt-xs">Analysis of newly integrated dataset v3.1</span>
+</a>
+</td>
+<td class="py-lg px-lg text-right">
+<div class="inline-flex items-center gap-xs px-2 py-1 bg-surface-container-highest rounded-sm border border-outline-variant">
+<span class="w-2 h-2 rounded-full bg-[#10B981]"></span>
+<span class="font-label-caps text-label-caps text-on-surface">Current</span>
+</div>
+</td>
+<td class="py-lg px-md text-right text-on-surface-variant">
+<span class="material-symbols-outlined text-[20px] group-hover:text-secondary transition-colors">chevron_right</span>
+</td>
+</tr>
+<!-- Run 2 -->
+<tr class="group hover:bg-surface-container-lowest hairline-b cursor-pointer transition-colors relative">
+<td class="py-lg px-lg">
+<span class="font-data-mono text-data-mono text-on-surface-variant">2023-10-24</span>
+</td>
+<td class="py-lg px-lg">
+<a class="flex flex-col focus:outline-none" href="#">
+<span class="font-section-sm text-section-sm text-on-surface-variant group-hover:text-secondary transition-colors">Run 2</span>
+<span class="text-outline text-sm mt-xs">Parameter adjustment for baseline sensitivity</span>
+</a>
+</td>
+<td class="py-lg px-lg text-right">
+<div class="inline-flex items-center gap-xs px-2 py-1 rounded-sm">
+<span class="font-label-caps text-label-caps text-outline">Archived</span>
+</div>
+</td>
+<td class="py-lg px-md text-right text-on-surface-variant">
+<span class="material-symbols-outlined text-[20px] group-hover:text-secondary transition-colors opacity-0 group-hover:opacity-100">chevron_right</span>
+</td>
+</tr>
+<!-- Run 1 (Initial) -->
+<tr class="group hover:bg-surface-container-lowest cursor-pointer transition-colors relative">
+<td class="py-lg px-lg">
+<span class="font-data-mono text-data-mono text-on-surface-variant">2023-09-12</span>
+</td>
+<td class="py-lg px-lg">
+<a class="flex flex-col focus:outline-none" href="#">
+<span class="font-section-sm text-section-sm text-on-surface-variant group-hover:text-secondary transition-colors">Run 1</span>
+<span class="text-outline text-sm mt-xs">Initial baseline establishment</span>
+</a>
+</td>
+<td class="py-lg px-lg text-right">
+<div class="inline-flex items-center gap-xs px-2 py-1 rounded-sm">
+<span class="font-label-caps text-label-caps text-outline">Initial</span>
+</div>
+</td>
+<td class="py-lg px-md text-right text-on-surface-variant">
+<span class="material-symbols-outlined text-[20px] group-hover:text-secondary transition-colors opacity-0 group-hover:opacity-100">chevron_right</span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Details Panel Placeholder (Example of layout density) -->
+<div class="mt-xl p-lg bg-surface-container-low border border-outline-variant rounded-lg">
+<h3 class="font-section-sm text-section-sm mb-md text-on-background">Snapshot Architecture Notes</h3>
+<p class="font-clinical-conclusion text-clinical-conclusion text-on-surface-variant max-w-[60ch]">
+                    Each run snapshot is immutable. Selecting a previous run will load a read-only terminal instance, preserving the exact state of evidence, bias assessments, and GRADE details active at the time of execution.
+                </p>
+<div class="mt-lg flex gap-md">
+<div class="flex-1 bg-surface-container-lowest p-md rounded border border-outline-variant">
+<span class="block font-label-caps text-label-caps text-outline mb-xs">Data Schema</span>
+<span class="font-data-mono text-data-mono text-on-surface">v1.4.2-stable</span>
+</div>
+<div class="flex-1 bg-surface-container-lowest p-md rounded border border-outline-variant">
+<span class="block font-label-caps text-label-caps text-outline mb-xs">Storage Hash</span>
+<span class="font-data-mono text-data-mono text-on-surface truncate block">sha256:8f43...a9b2</span>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- BottomNavBar (Mobile Fallback for Audit Trail context - simplified) -->
+<nav class="md:hidden fixed bottom-0 w-full z-50 flex justify-around items-center h-16 bg-surface border-t border-outline-variant pb-safe flat no shadows">
+<a class="flex flex-col items-center justify-center w-full h-full text-on-surface-variant hover:bg-surface-container transition-colors" href="#">
+<span class="material-symbols-outlined text-[24px]">gavel</span>
+</a>
+<a class="flex flex-col items-center justify-center w-full h-full text-on-surface-variant hover:bg-surface-container transition-colors" href="#">
+<span class="material-symbols-outlined text-[24px]">analytics</span>
+</a>
+<a class="flex flex-col items-center justify-center w-full h-full bg-surface-container-high text-secondary relative" href="#">
+<!-- Active Indicator line -->
+<div class="absolute top-0 w-8 h-1 bg-secondary rounded-b-sm"></div>
+<span class="material-symbols-outlined text-[24px]" style="font-variation-settings: 'FILL' 1;">history</span>
+</a>
+<a class="flex flex-col items-center justify-center w-full h-full text-on-surface-variant hover:bg-surface-container transition-colors" href="#">
+<span class="material-symbols-outlined text-[24px]">settings</span>
+</a>
+</nav>
+</body></html>

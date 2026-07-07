@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>LiveMeta - Updates / Living Diff</title>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;family=Source+Serif+4:opsz,wght@8..60,400&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-family: 'Material Symbols Outlined';
+            font-weight: normal;
+            font-style: normal;
+            font-size: 24px;  /* Preferred icon size */
+            display: inline-block;
+            line-height: 1;
+            text-transform: none;
+            letter-spacing: normal;
+            word-wrap: normal;
+            white-space: nowrap;
+            direction: ltr;
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-variant": "#e2e2e2",
+                        "surface-container": "#eeeeee",
+                        "secondary-fixed-dim": "#b4c5ff",
+                        "on-primary-fixed-variant": "#454747",
+                        "surface-container-high": "#e8e8e8",
+                        "inverse-on-surface": "#f1f1f1",
+                        "surface-tint": "#5d5f5e",
+                        "outline-variant": "#c4c7c7",
+                        "outline": "#747878",
+                        "error-container": "#ffdad6",
+                        "on-error": "#ffffff",
+                        "on-secondary-fixed-variant": "#003ea8",
+                        "on-secondary-fixed": "#00174b",
+                        "tertiary": "#000000",
+                        "on-background": "#1a1c1c",
+                        "on-tertiary-fixed-variant": "#454747",
+                        "on-secondary-container": "#fefcff",
+                        "inverse-surface": "#2f3131",
+                        "on-primary-fixed": "#1a1c1c",
+                        "tertiary-container": "#1a1c1c",
+                        "surface-container-lowest": "#ffffff",
+                        "surface-bright": "#f9f9f9",
+                        "primary-fixed-dim": "#c6c6c6",
+                        "on-tertiary": "#ffffff",
+                        "on-error-container": "#93000a",
+                        "tertiary-fixed-dim": "#c6c6c6",
+                        "surface-dim": "#dadada",
+                        "surface-container-low": "#f3f3f3",
+                        "primary": "#000000",
+                        "on-primary": "#ffffff",
+                        "on-secondary": "#ffffff",
+                        "on-surface": "#1a1c1c",
+                        "secondary": "#0051d5",
+                        "inverse-primary": "#c6c6c6",
+                        "primary-fixed": "#e2e2e2",
+                        "surface-container-highest": "#e2e2e2",
+                        "tertiary-fixed": "#e2e2e2",
+                        "secondary-fixed": "#dbe1ff",
+                        "on-surface-variant": "#434747",
+                        "background": "#f9f9f9",
+                        "on-tertiary-fixed": "#1a1c1c",
+                        "secondary-container": "#316bf3",
+                        "on-tertiary-container": "#838484",
+                        "primary-container": "#1a1c1c",
+                        "error": "#ba1a1a",
+                        "surface": "#f9f9f9",
+                        "on-primary-container": "#838484"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "sm": "8px",
+                        "lg": "16px",
+                        "xl": "24px",
+                        "md": "12px",
+                        "margin-mobile": "16px",
+                        "xs": "4px",
+                        "gutter": "24px",
+                        "xxl": "32px",
+                        "margin-desktop": "32px"
+                    },
+                    "fontFamily": {
+                        "section-sm": ["Inter"],
+                        "clinical-conclusion": ["\"Source Serif 4\""],
+                        "body-md": ["Inter"],
+                        "headline-md": ["Inter"],
+                        "data-mono": ["JetBrains Mono"],
+                        "label-caps": ["Inter"],
+                        "display-lg": ["Inter"]
+                    },
+                    "fontSize": {
+                        "section-sm": ["16px", { "lineHeight": "24px", "fontWeight": "500" }],
+                        "clinical-conclusion": ["18px", { "lineHeight": "28px", "fontWeight": "400" }],
+                        "body-md": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "headline-md": ["20px", { "lineHeight": "28px", "fontWeight": "500" }],
+                        "data-mono": ["13px", { "lineHeight": "18px", "fontWeight": "400" }],
+                        "label-caps": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600" }],
+                        "display-lg": ["32px", { "lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "600" }]
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-background text-on-background min-h-screen flex selection:bg-secondary-fixed-dim selection:text-on-secondary-fixed">
+<!-- TopNavBar (Mobile Only) -->
+<nav class="md:hidden fixed top-0 w-full z-50 flex justify-between items-center px-lg h-16 bg-surface dark:bg-primary-container border-b border-outline-variant dark:border-outline">
+<div class="text-headline-md font-headline-md font-bold text-on-surface dark:text-on-primary">LiveMeta</div>
+<div class="flex items-center gap-md">
+<button aria-label="dark_mode" class="p-2 text-on-surface hover:bg-surface-container transition-colors rounded-full">
+<span class="material-symbols-outlined">dark_mode</span>
+</button>
+<button aria-label="notifications" class="p-2 text-on-surface hover:bg-surface-container transition-colors rounded-full">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<img alt="User Avatar" class="w-8 h-8 rounded-full bg-surface-variant object-cover" data-alt="A highly detailed close-up of a minimalist user avatar placeholder icon in a professional clinical software interface. Light mode theme, crisp edges, subtle monochrome shading, high-end web application design style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBBclStIo449DHqoXSi4_nvSXs5hut1xODJ4kSK-wZfvFRzXDjTPRPiZNIEk7WqqDjF7ga16lZcwSQWMpFV3WkoO20sEqorj4xhEspifNG7Y2tDJOcPXJtDm4tOTWexJshFVHkkCqwWoKSxKhxFI9pf_VWJpp23duyvZXcXw7jQJigOwh5V8_ex6rOQ6ldolq_x5UfrZX8lXY3ySyXrdH8u3hhR2J0HpZLfNmI068iwskfeZ_1ibIlT"/>
+</div>
+</nav>
+<!-- SideNavBar (Desktop) -->
+<aside class="hidden md:flex fixed left-0 top-0 h-full w-64 flex-col py-xl bg-surface-container-low dark:bg-tertiary-container border-r border-outline-variant dark:border-outline z-40">
+<!-- Header -->
+<div class="px-xl mb-xxl flex flex-col items-start">
+<div class="flex items-center gap-sm mb-xs">
+<div class="w-8 h-8 bg-surface-variant rounded-full flex items-center justify-center border border-outline-variant">
+<span class="material-symbols-outlined text-[16px] text-on-surface">biotech</span>
+</div>
+<h1 class="font-headline-md text-headline-md text-on-surface dark:text-on-tertiary-fixed font-bold tracking-tight">LiveMeta</h1>
+</div>
+<p class="font-label-caps text-label-caps text-on-surface-variant uppercase text-[10px]">Clinical Terminal</p>
+</div>
+<!-- Main Nav -->
+<nav class="flex-1 flex flex-col px-lg gap-xs">
+<a class="flex items-center gap-md px-md py-sm rounded-md text-on-surface-variant dark:text-on-tertiary-fixed-variant hover:bg-surface-container-high dark:hover:bg-surface-variant transition-colors group" href="#">
+<span class="material-symbols-outlined group-hover:text-on-surface transition-colors text-[20px]">help_outline</span>
+<span class="font-section-sm text-section-sm group-hover:text-on-surface transition-colors">Ask</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm rounded-md text-on-surface-variant dark:text-on-tertiary-fixed-variant hover:bg-surface-container-high dark:hover:bg-surface-variant transition-colors group" href="#">
+<span class="material-symbols-outlined group-hover:text-on-surface transition-colors text-[20px]">database</span>
+<span class="font-section-sm text-section-sm group-hover:text-on-surface transition-colors">Evidence</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm rounded-md text-on-surface-variant dark:text-on-tertiary-fixed-variant hover:bg-surface-container-high dark:hover:bg-surface-variant transition-colors group" href="#">
+<span class="material-symbols-outlined group-hover:text-on-surface transition-colors text-[20px]">description</span>
+<span class="font-section-sm text-section-sm group-hover:text-on-surface transition-colors">Report</span>
+</a>
+<!-- Active Tab: Updates -->
+<a class="flex items-center gap-md px-md py-sm rounded-md bg-surface-container text-secondary dark:text-secondary-fixed-dim border-r-2 border-secondary dark:border-secondary-fixed-dim hover:bg-surface-container-high transition-transform transform scale-95 origin-left" href="#">
+<span class="material-symbols-outlined text-[20px]">sync</span>
+<span class="font-section-sm text-section-sm font-semibold">Updates</span>
+</a>
+</nav>
+<!-- Footer Nav -->
+<div class="px-lg flex flex-col gap-xs mt-auto pt-lg border-t border-outline-variant mx-md">
+<a class="flex items-center gap-md px-md py-sm rounded-md text-on-surface-variant dark:text-on-tertiary-fixed-variant hover:bg-surface-container-high transition-colors group" href="#">
+<span class="material-symbols-outlined text-[18px]">gavel</span>
+<span class="font-label-caps text-label-caps text-[11px]">Risk of Bias</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm rounded-md text-on-surface-variant dark:text-on-tertiary-fixed-variant hover:bg-surface-container-high transition-colors group" href="#">
+<span class="material-symbols-outlined text-[18px]">analytics</span>
+<span class="font-label-caps text-label-caps text-[11px]">GRADE Detail</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm rounded-md text-on-surface-variant dark:text-on-tertiary-fixed-variant hover:bg-surface-container-high transition-colors group" href="#">
+<span class="material-symbols-outlined text-[18px]">history</span>
+<span class="font-label-caps text-label-caps text-[11px]">Audit Trail</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm rounded-md text-on-surface-variant dark:text-on-tertiary-fixed-variant hover:bg-surface-container-high transition-colors group" href="#">
+<span class="material-symbols-outlined text-[18px]">download</span>
+<span class="font-label-caps text-label-caps text-[11px]">Export</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm rounded-md text-on-surface-variant dark:text-on-tertiary-fixed-variant hover:bg-surface-container-high transition-colors group" href="#">
+<span class="material-symbols-outlined text-[18px]">settings</span>
+<span class="font-label-caps text-label-caps text-[11px]">Settings</span>
+</a>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="flex-1 md:ml-64 pt-16 md:pt-0 p-margin-mobile md:p-margin-desktop bg-background min-h-screen flex flex-col gap-xl">
+<!-- Header Section -->
+<header class="flex flex-col gap-sm border-b border-outline-variant pb-md">
+<h2 class="font-display-lg text-display-lg text-on-background">Living Diff: Meta-Analysis Update</h2>
+<p class="font-body-md text-body-md text-on-surface-variant max-w-2xl">
+                Automatic recalculation triggered by the inclusion of new trial data. Review the impact on aggregate effect sizes and heterogeneity.
+            </p>
+</header>
+<!-- New Trial Banner (Notification) -->
+<div class="bg-[#EFF6FF] border border-[#BFDBFE] rounded-md p-md flex items-center justify-between shadow-sm">
+<div class="flex items-center gap-sm">
+<div class="w-2 h-2 rounded-full bg-[#2563EB] animate-pulse"></div>
+<span class="font-label-caps text-label-caps text-[#1E3A8A]">New results posted · NCT05·2026</span>
+</div>
+<button class="font-label-caps text-label-caps text-[#2563EB] hover:underline focus:outline-none focus:ring-2 focus:ring-[#2563EB] focus:ring-offset-2 rounded-sm transition-shadow">
+                View Source Data
+            </button>
+</div>
+<!-- Bento Grid Layout for Content -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-gutter">
+<!-- Diff Table Panel -->
+<section class="lg:col-span-5 bg-surface-container-lowest rounded-lg border border-outline-variant overflow-hidden flex flex-col">
+<div class="p-md border-b border-outline-variant bg-surface-bright flex justify-between items-center">
+<h3 class="font-section-sm text-section-sm text-on-surface">Parameter Shifts</h3>
+<span class="material-symbols-outlined text-outline text-[18px]">compare_arrows</span>
+</div>
+<div class="p-0 flex-1">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr>
+<th class="font-label-caps text-label-caps text-on-surface-variant p-md border-b border-outline-variant bg-surface">Metric</th>
+<th class="font-label-caps text-label-caps text-on-surface-variant p-md border-b border-outline-variant bg-surface text-right">Previous (V1.2)</th>
+<th class="p-md border-b border-outline-variant bg-surface w-8"></th>
+<th class="font-label-caps text-label-caps text-on-surface-variant p-md border-b border-outline-variant bg-surface text-right text-[#2563EB]">Current (V1.3)</th>
+</tr>
+</thead>
+<tbody class="font-data-mono text-data-mono text-on-surface">
+<tr class="group hover:bg-surface-bright transition-colors">
+<td class="p-md border-b border-outline-variant">Risk Ratio (RR)</td>
+<td class="p-md border-b border-outline-variant text-right text-on-surface-variant">0.81</td>
+<td class="p-md border-b border-outline-variant text-center text-outline-variant">→</td>
+<td class="p-md border-b border-outline-variant text-right font-medium text-[#2563EB]">0.80</td>
+</tr>
+<tr class="group hover:bg-surface-bright transition-colors">
+<td class="p-md border-b border-outline-variant">Heterogeneity (I²)</td>
+<td class="p-md border-b border-outline-variant text-right text-on-surface-variant">17%</td>
+<td class="p-md border-b border-outline-variant text-center text-outline-variant">→</td>
+<td class="p-md border-b border-outline-variant text-right font-medium text-[#2563EB]">11%</td>
+</tr>
+<tr class="group hover:bg-surface-bright transition-colors">
+<td class="p-md border-b border-outline-variant">GRADE Certainty</td>
+<td class="p-md border-b border-outline-variant text-right text-on-surface-variant">High</td>
+<td class="p-md border-b border-outline-variant text-center text-outline-variant">→</td>
+<td class="p-md border-b border-outline-variant text-right">High</td>
+</tr>
+<tr class="group hover:bg-surface-bright transition-colors">
+<td class="p-md border-b border-outline-variant">Total Events (n)</td>
+<td class="p-md border-b border-outline-variant text-right text-on-surface-variant">1490</td>
+<td class="p-md border-b border-outline-variant text-center text-outline-variant">→</td>
+<td class="p-md border-b border-outline-variant text-right font-medium text-[#2563EB]">2578</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Verdict Section -->
+<div class="p-lg bg-surface border-t border-outline-variant flex flex-col gap-sm">
+<span class="font-label-caps text-label-caps text-outline uppercase">Synthesis Verdict</span>
+<p class="font-clinical-conclusion text-clinical-conclusion text-on-surface flex items-center gap-sm">
+<span class="material-symbols-outlined text-[#2563EB] text-[20px]" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+                        Benefit holds.
+                    </p>
+</div>
+</section>
+<!-- Forest Plot Visualization Panel -->
+<section class="lg:col-span-7 bg-surface-container-lowest rounded-lg border border-outline-variant overflow-hidden flex flex-col">
+<div class="p-md border-b border-outline-variant bg-surface-bright flex justify-between items-center">
+<h3 class="font-section-sm text-section-sm text-on-surface">Updated Forest Plot</h3>
+<div class="flex items-center gap-xs">
+<button aria-label="Zoom in" class="p-1 hover:bg-surface-container rounded transition-colors focus:outline-none focus:ring-2 focus:ring-[#2563EB]">
+<span class="material-symbols-outlined text-[18px] text-outline">zoom_in</span>
+</button>
+<button aria-label="Download SVG" class="p-1 hover:bg-surface-container rounded transition-colors focus:outline-none focus:ring-2 focus:ring-[#2563EB]">
+<span class="material-symbols-outlined text-[18px] text-outline">download</span>
+</button>
+</div>
+</div>
+<!-- Simulated Forest Plot Canvas area -->
+<div class="flex-1 p-lg relative bg-white flex flex-col min-h-[300px]">
+<!-- Header Row -->
+<div class="flex justify-between font-label-caps text-label-caps text-on-surface-variant border-b border-outline-variant pb-xs mb-md">
+<div class="w-1/4">Study</div>
+<div class="w-1/4 text-center">Weight</div>
+<div class="w-2/4 text-right pr-xl">RR [95% CI]</div>
+</div>
+<!-- Trial Rows (CSS driven structural representation) -->
+<div class="flex flex-col gap-md font-data-mono text-data-mono relative z-10">
+<!-- Trial 1 -->
+<div class="flex items-center justify-between group">
+<div class="w-1/4 text-on-surface">SMITH 2021</div>
+<div class="w-1/4 text-center text-outline">28.4%</div>
+<div class="w-2/4 text-right pr-xl text-on-surface">0.85 [0.72, 1.01]</div>
+</div>
+<!-- Trial 2 -->
+<div class="flex items-center justify-between group">
+<div class="w-1/4 text-on-surface">JOHNSON 2022</div>
+<div class="w-1/4 text-center text-outline">34.1%</div>
+<div class="w-2/4 text-right pr-xl text-on-surface">0.78 [0.65, 0.94]</div>
+</div>
+<!-- New Trial (Highlighted) -->
+<div class="flex items-center justify-between bg-[#EFF6FF] -mx-lg px-lg py-xs rounded-sm border border-[#BFDBFE] group">
+<div class="w-1/4 text-[#1E3A8A] font-medium flex items-center gap-xs">
+                                NCT05·2026 
+                                <span class="bg-[#2563EB] text-white text-[8px] px-1 py-0.5 rounded-sm uppercase tracking-widest font-label-caps">New</span>
+</div>
+<div class="w-1/4 text-center text-[#2563EB]">37.5%</div>
+<div class="w-2/4 text-right pr-xl text-[#2563EB] font-medium">0.79 [0.68, 0.91]</div>
+</div>
+<!-- Overall Effect -->
+<div class="flex items-center justify-between mt-sm pt-sm border-t border-outline-variant">
+<div class="w-1/4 font-semibold text-on-surface">Overall</div>
+<div class="w-1/4 text-center text-on-surface">100.0%</div>
+<div class="w-2/4 text-right pr-xl font-semibold text-on-surface">0.80 [0.73, 0.88]</div>
+</div>
+</div>
+<!-- Visual Plot Area (Absolute positioned overlay for visual effect) -->
+<!-- In a real app, this would be an SVG or Canvas. Here we use CSS structural elements to simulate it behind the text layout context if needed, or side-by-side. For visual density, we abstract it to a schematic line. -->
+<div class="absolute right-lg top-14 bottom-lg w-1/3 border-l border-outline-variant flex flex-col justify-start pt-xs pointer-events-none opacity-80">
+<!-- Line of no effect -->
+<div class="absolute left-1/2 top-0 bottom-0 border-l border-dashed border-outline -ml-[0.5px]"></div>
+<!-- Plot points (simulated) -->
+<div class="relative h-5 mb-md mt-0 flex items-center w-full">
+<div class="absolute h-[1px] bg-outline left-[10%] right-[40%]"></div>
+<div class="absolute w-2 h-2 bg-on-surface left-[25%] -ml-1 top-1/2 -mt-1 rounded-sm"></div>
+</div>
+<div class="relative h-5 mb-md flex items-center w-full">
+<div class="absolute h-[1px] bg-outline left-[5%] right-[55%]"></div>
+<div class="absolute w-2 h-2 bg-on-surface left-[15%] -ml-1 top-1/2 -mt-1 rounded-sm"></div>
+</div>
+<!-- New Trial Plot -->
+<div class="relative h-6 mb-md flex items-center w-full bg-[#EFF6FF] -ml-2 pl-2">
+<div class="absolute h-[1.5px] bg-[#2563EB] left-[8%] right-[45%] z-10"></div>
+<div class="absolute w-3 h-3 bg-[#2563EB] left-[20%] -ml-1.5 top-1/2 -mt-1.5 rounded-sm z-10"></div>
+</div>
+<!-- Diamond (Overall) -->
+<div class="relative h-6 mt-lg flex items-center w-full justify-center">
+<div class="absolute left-[18%] top-1/2 -mt-2 w-4 h-4 bg-transparent border-[1.5px] border-on-surface transform rotate-45"></div>
+</div>
+</div>
+</div>
+</section>
+</div>
+</main>
+</body></html>

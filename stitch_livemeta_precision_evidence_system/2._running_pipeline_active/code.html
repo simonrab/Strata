@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Running / Pipeline screen</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@400&amp;family=Source+Serif+4:wght@400&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-variant": "#e2e2e2",
+                        "surface-container": "#eeeeee",
+                        "secondary-fixed-dim": "#b4c5ff",
+                        "on-primary-fixed-variant": "#454747",
+                        "surface-container-high": "#e8e8e8",
+                        "inverse-on-surface": "#f1f1f1",
+                        "surface-tint": "#5d5f5e",
+                        "outline-variant": "#c4c7c7",
+                        "outline": "#747878",
+                        "error-container": "#ffdad6",
+                        "on-error": "#ffffff",
+                        "on-secondary-fixed-variant": "#003ea8",
+                        "on-secondary-fixed": "#00174b",
+                        "tertiary": "#000000",
+                        "on-background": "#1a1c1c",
+                        "on-tertiary-fixed-variant": "#454747",
+                        "on-secondary-container": "#fefcff",
+                        "inverse-surface": "#2f3131",
+                        "on-primary-fixed": "#1a1c1c",
+                        "tertiary-container": "#1a1c1c",
+                        "surface-container-lowest": "#ffffff",
+                        "surface-bright": "#f9f9f9",
+                        "primary-fixed-dim": "#c6c6c6",
+                        "on-tertiary": "#ffffff",
+                        "on-error-container": "#93000a",
+                        "tertiary-fixed-dim": "#c6c6c6",
+                        "surface-dim": "#dadada",
+                        "surface-container-low": "#f3f3f3",
+                        "primary": "#000000",
+                        "on-primary": "#ffffff",
+                        "on-secondary": "#ffffff",
+                        "on-surface": "#1a1c1c",
+                        "secondary": "#0051d5",
+                        "inverse-primary": "#c6c6c6",
+                        "primary-fixed": "#e2e2e2",
+                        "surface-container-highest": "#e2e2e2",
+                        "tertiary-fixed": "#e2e2e2",
+                        "secondary-fixed": "#dbe1ff",
+                        "on-surface-variant": "#434747",
+                        "background": "#f9f9f9",
+                        "on-tertiary-fixed": "#1a1c1c",
+                        "secondary-container": "#316bf3",
+                        "on-tertiary-container": "#838484",
+                        "primary-container": "#1a1c1c",
+                        "error": "#ba1a1a",
+                        "surface": "#f9f9f9",
+                        "on-primary-container": "#838484"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "sm": "8px",
+                        "lg": "16px",
+                        "xl": "24px",
+                        "md": "12px",
+                        "margin-mobile": "16px",
+                        "xs": "4px",
+                        "gutter": "24px",
+                        "xxl": "32px",
+                        "margin-desktop": "32px"
+                    },
+                    "fontFamily": {
+                        "section-sm": ["Inter"],
+                        "clinical-conclusion": ["\"Source Serif 4\""],
+                        "body-md": ["Inter"],
+                        "headline-md": ["Inter"],
+                        "data-mono": ["JetBrains Mono"],
+                        "label-caps": ["Inter"],
+                        "display-lg": ["Inter"]
+                    },
+                    "fontSize": {
+                        "section-sm": ["16px", { "lineHeight": "24px", "fontWeight": "500" }],
+                        "clinical-conclusion": ["18px", { "lineHeight": "28px", "fontWeight": "400" }],
+                        "body-md": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "headline-md": ["20px", { "lineHeight": "28px", "fontWeight": "500" }],
+                        "data-mono": ["13px", { "lineHeight": "18px", "fontWeight": "400" }],
+                        "label-caps": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600" }],
+                        "display-lg": ["32px", { "lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "600" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .hairline-b { border-bottom-width: 0.5px; border-style: solid; border-color: theme('colors.outline-variant'); }
+        .hairline-r { border-right-width: 0.5px; border-style: solid; border-color: theme('colors.outline-variant'); }
+        .hairline-l { border-left-width: 0.5px; border-style: solid; border-color: theme('colors.outline-variant'); }
+        .hairline-t { border-top-width: 0.5px; border-style: solid; border-color: theme('colors.outline-variant'); }
+        .hairline-all { border-width: 0.5px; border-style: solid; border-color: theme('colors.outline-variant'); }
+        
+        @keyframes spin-slow {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .animate-spin-slow {
+            animation: spin-slow 3s linear infinite;
+        }
+        @keyframes pulse-opacity {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .animate-pulse-opacity {
+            animation: pulse-opacity 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+    </style>
+</head>
+<body class="bg-surface text-on-surface antialiased h-screen overflow-hidden flex font-body-md text-body-md">
+<!-- SideNavBar -->
+<nav class="fixed left-0 top-0 h-full w-64 flex flex-col py-xl bg-surface-container-low dark:bg-tertiary-container hairline-r z-40">
+<div class="px-xl mb-xl">
+<div class="flex items-center gap-md">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">dataset</span>
+<span class="font-headline-md text-headline-md text-on-surface dark:text-on-tertiary-fixed">LiveMeta</span>
+</div>
+<p class="font-label-caps text-label-caps text-on-surface-variant mt-xs">Clinical Terminal</p>
+</div>
+<div class="flex-1 flex flex-col gap-xs px-md">
+<a class="flex items-center gap-md px-md py-sm rounded-DEFAULT text-on-surface-variant dark:text-on-tertiary-fixed-variant hover:bg-surface-container-high dark:hover:bg-surface-variant transition-colors group" href="#">
+<span class="material-symbols-outlined text-[20px] group-hover:text-primary transition-colors">help_outline</span>
+<span class="font-label-caps text-label-caps mt-[2px]">Ask</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm rounded-DEFAULT text-on-surface-variant dark:text-on-tertiary-fixed-variant hover:bg-surface-container-high dark:hover:bg-surface-variant transition-colors group" href="#">
+<span class="material-symbols-outlined text-[20px] group-hover:text-primary transition-colors">database</span>
+<span class="font-label-caps text-label-caps mt-[2px]">Evidence</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm rounded-DEFAULT text-on-surface-variant dark:text-on-tertiary-fixed-variant hover:bg-surface-container-high dark:hover:bg-surface-variant transition-colors group" href="#">
+<span class="material-symbols-outlined text-[20px] group-hover:text-primary transition-colors">description</span>
+<span class="font-label-caps text-label-caps mt-[2px]">Report</span>
+</a>
+<!-- Active Tab: Updates -->
+<a class="flex items-center gap-md px-md py-sm rounded-DEFAULT text-secondary dark:text-secondary-fixed-dim border-r-2 border-secondary dark:border-secondary-fixed-dim bg-surface-container-high dark:bg-surface-variant group transform scale-95 transition-transform" href="#">
+<span class="material-symbols-outlined text-[20px]">sync</span>
+<span class="font-label-caps text-label-caps mt-[2px]">Updates</span>
+</a>
+</div>
+<div class="px-md mt-auto flex flex-col gap-xs hairline-t pt-lg border-outline-variant">
+<a class="flex items-center gap-md px-md py-sm rounded-DEFAULT text-on-surface-variant hover:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined text-[18px]">gavel</span>
+<span class="font-label-caps text-label-caps mt-[2px]">Risk of Bias</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm rounded-DEFAULT text-on-surface-variant hover:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined text-[18px]">analytics</span>
+<span class="font-label-caps text-label-caps mt-[2px]">GRADE Detail</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm rounded-DEFAULT text-on-surface-variant hover:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined text-[18px]">history</span>
+<span class="font-label-caps text-label-caps mt-[2px]">Audit Trail</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm rounded-DEFAULT text-on-surface-variant hover:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined text-[18px]">download</span>
+<span class="font-label-caps text-label-caps mt-[2px]">Export</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm rounded-DEFAULT text-on-surface-variant hover:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined text-[18px]">settings</span>
+<span class="font-label-caps text-label-caps mt-[2px]">Settings</span>
+</a>
+</div>
+</nav>
+<!-- TopNavBar -->
+<header class="fixed top-0 w-full z-50 flex justify-between items-center px-lg h-16 bg-surface dark:bg-primary-container pl-[280px] hairline-b">
+<div class="flex items-center gap-lg">
+<nav class="flex items-center gap-md">
+<a class="text-on-surface-variant dark:text-on-primary-container font-label-caps text-label-caps hover:bg-surface-container dark:hover:bg-tertiary-container transition-colors px-md py-sm rounded-DEFAULT" href="#">Review Title</a>
+</nav>
+</div>
+<div class="flex items-center gap-sm">
+<button class="p-sm rounded-full text-on-surface-variant hover:bg-surface-container transition-colors flex items-center justify-center">
+<span class="material-symbols-outlined text-[20px]">dark_mode</span>
+</button>
+<button class="p-sm rounded-full text-on-surface-variant hover:bg-surface-container transition-colors flex items-center justify-center">
+<span class="material-symbols-outlined text-[20px]">notifications</span>
+</button>
+<div class="w-8 h-8 rounded-full bg-surface-container-highest hairline-all overflow-hidden ml-sm flex items-center justify-center">
+<span class="material-symbols-outlined text-outline">person</span>
+</div>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="ml-64 pt-16 flex-1 h-full overflow-y-auto bg-surface relative">
+<div class="max-w-[1200px] mx-auto px-margin-desktop py-margin-desktop h-full flex flex-col">
+<header class="mb-xxl">
+<div class="flex items-center gap-md mb-xs">
+<span class="w-2 h-2 rounded-full bg-secondary animate-pulse-opacity"></span>
+<span class="font-label-caps text-label-caps text-secondary tracking-widest">SYSTEM ACTIVE</span>
+</div>
+<h1 class="font-display-lg text-display-lg text-on-surface">Pipeline Execution</h1>
+<p class="font-body-md text-body-md text-on-surface-variant mt-sm max-w-2xl">Terminal process engaged. Monitoring sequential evidence synthesis tasks.</p>
+</header>
+<div class="flex-1 grid grid-cols-12 gap-gutter h-full min-h-[500px]">
+<!-- Stepper Pane -->
+<div class="col-span-4 bg-surface-container-lowest hairline-all rounded-lg p-xl relative flex flex-col h-full overflow-hidden">
+<div class="font-label-caps text-label-caps text-on-surface-variant mb-lg pb-md hairline-b flex justify-between items-center">
+<span>Execution Sequence</span>
+<span class="font-data-mono text-data-mono text-[10px] text-outline">PID: 8492</span>
+</div>
+<div class="relative flex-1 py-md overflow-y-auto pl-xs">
+<!-- Vertical line path -->
+<div class="absolute left-[15px] top-6 bottom-6 w-px bg-outline-variant opacity-50 border-l-[0.5px] border-outline-variant"></div>
+<div class="flex flex-col gap-xl relative z-10">
+<!-- Step 1: Searching -->
+<div class="flex items-start gap-lg group">
+<div class="w-8 h-8 rounded-full bg-surface flex items-center justify-center relative shrink-0">
+<div class="absolute inset-0 bg-primary opacity-10 rounded-full"></div>
+<span class="material-symbols-outlined text-primary text-[18px]">check_circle</span>
+</div>
+<div class="pt-[4px] flex-1">
+<h3 class="font-section-sm text-section-sm text-on-surface">Searching</h3>
+<div class="mt-xs flex items-center justify-between">
+<span class="font-body-md text-[13px] text-on-surface-variant">PubMed, Embase, CENTRAL</span>
+<span class="font-data-mono text-[11px] text-primary bg-surface-container px-sm py-[2px] rounded-sm hairline-all">27 found</span>
+</div>
+</div>
+</div>
+<!-- Step 2: Extracting -->
+<div class="flex items-start gap-lg group">
+<div class="w-8 h-8 rounded-full bg-surface flex items-center justify-center relative shrink-0">
+<div class="absolute inset-0 bg-primary opacity-10 rounded-full"></div>
+<span class="material-symbols-outlined text-primary text-[18px]">check_circle</span>
+</div>
+<div class="pt-[4px] flex-1">
+<h3 class="font-section-sm text-section-sm text-on-surface">Extracting</h3>
+<div class="mt-xs flex items-center justify-between">
+<span class="font-body-md text-[13px] text-on-surface-variant">Metadata &amp; PICO elements</span>
+<span class="font-data-mono text-[11px] text-on-surface-variant">100%</span>
+</div>
+</div>
+</div>
+<!-- Step 3: Validating (Active) -->
+<div class="flex items-start gap-lg group">
+<div class="w-8 h-8 rounded-full bg-surface flex items-center justify-center relative shrink-0 shadow-[0_0_0_2px_theme('colors.secondary'),0_0_0_4px_theme('colors.surface')]">
+<div class="absolute inset-0 bg-secondary-container opacity-20 rounded-full"></div>
+<span class="material-symbols-outlined text-secondary text-[18px] animate-spin-slow">sync</span>
+</div>
+<div class="pt-[4px] flex-1">
+<h3 class="font-section-sm text-section-sm text-secondary font-semibold">Validating</h3>
+<div class="mt-xs flex items-center justify-between">
+<span class="font-body-md text-[13px] text-on-surface">Cross-referencing entities</span>
+<span class="font-data-mono text-[11px] text-secondary animate-pulse-opacity">screening...</span>
+</div>
+</div>
+</div>
+<!-- Step 4: Pooling -->
+<div class="flex items-start gap-lg opacity-50 grayscale transition-all duration-300">
+<div class="w-8 h-8 rounded-full bg-surface flex items-center justify-center relative shrink-0 border border-outline">
+<span class="material-symbols-outlined text-outline text-[18px]">radio_button_unchecked</span>
+</div>
+<div class="pt-[4px] flex-1">
+<h3 class="font-section-sm text-section-sm text-outline">Pooling</h3>
+<div class="mt-xs flex items-center justify-between">
+<span class="font-body-md text-[13px] text-outline">Statistical synthesis</span>
+<span class="font-data-mono text-[11px] text-outline">pending</span>
+</div>
+</div>
+</div>
+<!-- Step 5: Risk of Bias -->
+<div class="flex items-start gap-lg opacity-50 grayscale">
+<div class="w-8 h-8 rounded-full bg-surface flex items-center justify-center relative shrink-0 border border-outline">
+<span class="material-symbols-outlined text-outline text-[18px]">radio_button_unchecked</span>
+</div>
+<div class="pt-[4px] flex-1">
+<h3 class="font-section-sm text-section-sm text-outline">Risk of Bias</h3>
+<div class="mt-xs flex items-center justify-between">
+<span class="font-body-md text-[13px] text-outline">Automated assessment</span>
+<span class="font-data-mono text-[11px] text-outline">pending</span>
+</div>
+</div>
+</div>
+<!-- Step 6: Grading -->
+<div class="flex items-start gap-lg opacity-50 grayscale">
+<div class="w-8 h-8 rounded-full bg-surface flex items-center justify-center relative shrink-0 border border-outline">
+<span class="material-symbols-outlined text-outline text-[18px]">radio_button_unchecked</span>
+</div>
+<div class="pt-[4px] flex-1">
+<h3 class="font-section-sm text-section-sm text-outline">Grading</h3>
+<div class="mt-xs flex items-center justify-between">
+<span class="font-body-md text-[13px] text-outline">Certainty of evidence</span>
+<span class="font-data-mono text-[11px] text-outline">pending</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Terminal Output Pane -->
+<div class="col-span-8 bg-[#0E0F0F] rounded-lg relative flex flex-col h-full overflow-hidden text-surface-container">
+<div class="font-label-caps text-label-caps text-outline-variant bg-[#1a1c1c] px-xl py-md border-b-[0.5px] border-[#2f3131] flex justify-between items-center shrink-0">
+<div class="flex items-center gap-sm">
+<span class="material-symbols-outlined text-[16px]">terminal</span>
+<span>Live Stdout</span>
+</div>
+<div class="flex gap-sm">
+<div class="w-2 h-2 rounded-full bg-[#434747]"></div>
+<div class="w-2 h-2 rounded-full bg-[#434747]"></div>
+<div class="w-2 h-2 rounded-full bg-[#434747]"></div>
+</div>
+</div>
+<div class="flex-1 p-xl overflow-y-auto font-data-mono text-data-mono flex flex-col gap-sm text-[12px] leading-relaxed relative">
+<div class="absolute top-0 left-0 w-full h-8 bg-gradient-to-b from-[#0E0F0F] to-transparent pointer-events-none"></div>
+<div class="opacity-40 flex gap-md">
+<span class="text-[#747878] shrink-0">[10:42:01]</span>
+<span class="text-[#c4c7c7]">Initializing systematic search module across defined repositories...</span>
+</div>
+<div class="opacity-40 flex gap-md">
+<span class="text-[#747878] shrink-0">[10:42:05]</span>
+<span class="text-[#b4c5ff]">Query matched 27 unique records. Commencing deduplication.</span>
+</div>
+<div class="opacity-50 flex gap-md">
+<span class="text-[#747878] shrink-0">[10:42:12]</span>
+<span class="text-[#c4c7c7]">Deduplication complete. 27 records retained. Spawning extraction threads.</span>
+</div>
+<div class="opacity-60 flex gap-md">
+<span class="text-[#747878] shrink-0">[10:42:18]</span>
+<span class="text-[#c4c7c7]">Thread [A1] extracted PICO parameters from PMID:34291882.</span>
+</div>
+<div class="opacity-70 flex gap-md">
+<span class="text-[#747878] shrink-0">[10:42:24]</span>
+<span class="text-[#c4c7c7]">Thread [B4] extracted outcome metrics from PMID:35102941.</span>
+</div>
+<div class="opacity-80 flex gap-md">
+<span class="text-[#747878] shrink-0">[10:42:35]</span>
+<span class="text-[#b4c5ff]">Extraction phase finalized. Tensor transformation initiated.</span>
+</div>
+<!-- Active Logs -->
+<div class="mt-md pt-md border-t-[0.5px] border-[#2f3131]"></div>
+<div class="flex gap-md">
+<span class="text-[#747878] shrink-0">[10:43:02]</span>
+<span class="text-surface">Validating semantic equivalence for primary outcome: 'Mortality (30-day)'</span>
+</div>
+<div class="flex gap-md">
+<span class="text-[#747878] shrink-0">[10:43:08]</span>
+<span class="text-surface">Cross-referencing entity alignments against clinical ontology...</span>
+</div>
+<div class="flex gap-md">
+<span class="text-[#747878] shrink-0">[10:43:11]</span>
+<span class="text-[#f1f1f1] flex items-center gap-sm">
+<span class="material-symbols-outlined text-[14px] animate-spin-slow">sync</span>
+                                Screening document subset [12/27] for methodological constraints...
+                            </span>
+</div>
+<!-- Cursor -->
+<div class="mt-xs w-2 h-4 bg-secondary-fixed-dim animate-pulse"></div>
+<div class="absolute bottom-0 left-0 w-full h-16 bg-gradient-to-t from-[#0E0F0F] to-transparent pointer-events-none"></div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<script>
+        // Simple script to auto-scroll terminal if needed in a real app
+        document.addEventListener('DOMContentLoaded', () => {
+            const term = document.querySelector('.overflow-y-auto.font-data-mono');
+            if(term) {
+                term.scrollTop = term.scrollHeight;
+            }
+        });
+    </script>
+</body></html>

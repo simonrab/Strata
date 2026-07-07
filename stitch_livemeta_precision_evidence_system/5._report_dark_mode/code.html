@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>LiveMeta - Clinical Terminal - Report Hero</title>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;500&amp;family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,500;1,8..60,400&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind Config -->
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-variant": "#e2e2e2",
+                        "surface-container": "#eeeeee",
+                        "secondary-fixed-dim": "#b4c5ff",
+                        "on-primary-fixed-variant": "#454747",
+                        "surface-container-high": "#e8e8e8",
+                        "inverse-on-surface": "#f1f1f1",
+                        "surface-tint": "#5d5f5e",
+                        "outline-variant": "#c4c7c7",
+                        "outline": "#747878",
+                        "error-container": "#ffdad6",
+                        "on-error": "#ffffff",
+                        "on-secondary-fixed-variant": "#003ea8",
+                        "on-secondary-fixed": "#00174b",
+                        "tertiary": "#000000",
+                        "on-background": "#1a1c1c",
+                        "on-tertiary-fixed-variant": "#454747",
+                        "on-secondary-container": "#fefcff",
+                        "inverse-surface": "#2f3131",
+                        "on-primary-fixed": "#1a1c1c",
+                        "tertiary-container": "#1a1c1c",
+                        "surface-container-lowest": "#ffffff",
+                        "surface-bright": "#f9f9f9",
+                        "primary-fixed-dim": "#c6c6c6",
+                        "on-tertiary": "#ffffff",
+                        "on-error-container": "#93000a",
+                        "tertiary-fixed-dim": "#c6c6c6",
+                        "surface-dim": "#dadada",
+                        "surface-container-low": "#f3f3f3",
+                        "primary": "#000000",
+                        "on-primary": "#ffffff",
+                        "on-secondary": "#ffffff",
+                        "on-surface": "#1a1c1c",
+                        "secondary": "#0051d5",
+                        "inverse-primary": "#c6c6c6",
+                        "primary-fixed": "#e2e2e2",
+                        "surface-container-highest": "#e2e2e2",
+                        "tertiary-fixed": "#e2e2e2",
+                        "secondary-fixed": "#dbe1ff",
+                        "on-surface-variant": "#434747",
+                        "background": "#f9f9f9",
+                        "on-tertiary-fixed": "#1a1c1c",
+                        "secondary-container": "#316bf3",
+                        "on-tertiary-container": "#838484",
+                        "primary-container": "#1a1c1c",
+                        "error": "#ba1a1a",
+                        "surface": "#f9f9f9",
+                        "on-primary-container": "#838484"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "sm": "8px",
+                        "lg": "16px",
+                        "xl": "24px",
+                        "md": "12px",
+                        "margin-mobile": "16px",
+                        "xs": "4px",
+                        "gutter": "24px",
+                        "xxl": "32px",
+                        "margin-desktop": "32px"
+                    },
+                    "fontFamily": {
+                        "section-sm": ["Inter"],
+                        "clinical-conclusion": ["\"Source Serif 4\""],
+                        "body-md": ["Inter"],
+                        "headline-md": ["Inter"],
+                        "data-mono": ["JetBrains Mono"],
+                        "label-caps": ["Inter"],
+                        "display-lg": ["Inter"]
+                    },
+                    "fontSize": {
+                        "section-sm": ["16px", { "lineHeight": "24px", "fontWeight": "500" }],
+                        "clinical-conclusion": ["18px", { "lineHeight": "28px", "fontWeight": "400" }],
+                        "body-md": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "headline-md": ["20px", { "lineHeight": "28px", "fontWeight": "500" }],
+                        "data-mono": ["13px", { "lineHeight": "18px", "fontWeight": "400" }],
+                        "label-caps": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600" }],
+                        "display-lg": ["32px", { "lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "600" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        /* Hairline borders for terminal aesthetic */
+        .hairline-b { border-bottom: 0.5px solid #2f3131; }
+        .hairline-t { border-top: 0.5px solid #2f3131; }
+        .hairline-l { border-left: 0.5px solid #2f3131; }
+        .hairline-r { border-right: 0.5px solid #2f3131; }
+        .hairline-all { border: 0.5px solid #2f3131; }
+    </style>
+</head>
+<body class="bg-tertiary text-inverse-on-surface font-body-md h-screen w-screen overflow-hidden flex antialiased">
+<!-- SideNavBar (Shared Component) -->
+<nav class="fixed left-0 top-0 h-full w-64 flex flex-col py-xl bg-tertiary-container border-r border-outline dark:border-outline z-50">
+<!-- Header -->
+<div class="px-xl mb-xxl flex flex-col gap-xs">
+<div class="font-headline-md text-headline-md text-inverse-on-surface">LiveMeta</div>
+<div class="font-label-caps text-label-caps text-on-tertiary-container">Clinical Terminal</div>
+</div>
+<!-- Main Tabs -->
+<div class="flex-1 flex flex-col">
+<!-- Ask -->
+<a class="flex items-center gap-md px-xl py-md text-on-tertiary-fixed-variant hover:bg-surface-variant transition-colors group" href="#">
+<span class="material-symbols-outlined text-[20px] group-hover:text-inverse-on-surface transition-colors">help_outline</span>
+<span class="font-label-caps text-label-caps mt-[2px] group-hover:text-inverse-on-surface transition-colors">Ask</span>
+</a>
+<!-- Evidence -->
+<a class="flex items-center gap-md px-xl py-md text-on-tertiary-fixed-variant hover:bg-surface-variant transition-colors group" href="#">
+<span class="material-symbols-outlined text-[20px] group-hover:text-inverse-on-surface transition-colors">database</span>
+<span class="font-label-caps text-label-caps mt-[2px] group-hover:text-inverse-on-surface transition-colors">Evidence</span>
+</a>
+<!-- Report (Active) -->
+<a class="flex items-center gap-md px-xl py-md text-secondary-fixed-dim border-r-2 border-secondary-fixed-dim scale-95 origin-left transition-transform bg-inverse-surface/20" href="#">
+<span class="material-symbols-outlined text-[20px]">description</span>
+<span class="font-label-caps text-label-caps mt-[2px]">Report</span>
+</a>
+<!-- Updates -->
+<a class="flex items-center gap-md px-xl py-md text-on-tertiary-fixed-variant hover:bg-surface-variant transition-colors group" href="#">
+<span class="material-symbols-outlined text-[20px] group-hover:text-inverse-on-surface transition-colors">sync</span>
+<span class="font-label-caps text-label-caps mt-[2px] group-hover:text-inverse-on-surface transition-colors">Updates</span>
+</a>
+</div>
+<!-- Footer Tabs -->
+<div class="flex flex-col mt-auto pt-xl hairline-t">
+<a class="flex items-center gap-md px-xl py-md text-on-tertiary-fixed-variant hover:bg-surface-variant transition-colors group" href="#">
+<span class="material-symbols-outlined text-[18px] group-hover:text-inverse-on-surface">gavel</span>
+<span class="font-label-caps text-label-caps mt-[2px] group-hover:text-inverse-on-surface">Risk of Bias</span>
+</a>
+<a class="flex items-center gap-md px-xl py-md text-on-tertiary-fixed-variant hover:bg-surface-variant transition-colors group" href="#">
+<span class="material-symbols-outlined text-[18px] group-hover:text-inverse-on-surface">analytics</span>
+<span class="font-label-caps text-label-caps mt-[2px] group-hover:text-inverse-on-surface">GRADE Detail</span>
+</a>
+<a class="flex items-center gap-md px-xl py-md text-on-tertiary-fixed-variant hover:bg-surface-variant transition-colors group" href="#">
+<span class="material-symbols-outlined text-[18px] group-hover:text-inverse-on-surface">history</span>
+<span class="font-label-caps text-label-caps mt-[2px] group-hover:text-inverse-on-surface">Audit Trail</span>
+</a>
+<a class="flex items-center gap-md px-xl py-md text-on-tertiary-fixed-variant hover:bg-surface-variant transition-colors group" href="#">
+<span class="material-symbols-outlined text-[18px] group-hover:text-inverse-on-surface">download</span>
+<span class="font-label-caps text-label-caps mt-[2px] group-hover:text-inverse-on-surface">Export</span>
+</a>
+<a class="flex items-center gap-md px-xl py-md text-on-tertiary-fixed-variant hover:bg-surface-variant transition-colors group" href="#">
+<span class="material-symbols-outlined text-[18px] group-hover:text-inverse-on-surface">settings</span>
+<span class="font-label-caps text-label-caps mt-[2px] group-hover:text-inverse-on-surface">Settings</span>
+</a>
+</div>
+</nav>
+<!-- Main Canvas -->
+<main class="ml-64 flex-1 flex h-full">
+<!-- Center Dashboard Area -->
+<div class="flex-1 flex flex-col p-margin-desktop overflow-y-auto">
+<!-- Top Action Bar -->
+<div class="flex justify-between items-end mb-xxl pb-md hairline-b">
+<div>
+<h1 class="font-headline-md text-headline-md text-inverse-on-surface mb-xs">Synthesized Findings</h1>
+<div class="font-data-mono text-data-mono text-on-tertiary-container">Analysis ID: META-902-A • Updated 12m ago</div>
+</div>
+<div class="flex gap-md">
+<button class="px-lg py-sm border-[0.5px] border-inverse-surface text-inverse-on-surface font-label-caps text-label-caps hover:bg-inverse-surface transition-colors rounded-DEFAULT flex items-center gap-xs">
+<span class="material-symbols-outlined text-[16px]">share</span>
+                        Export
+                    </button>
+<button class="px-lg py-sm bg-inverse-on-surface text-primary font-label-caps text-label-caps hover:opacity-90 transition-opacity rounded-DEFAULT flex items-center gap-xs">
+<span class="material-symbols-outlined text-[16px]">check_circle</span>
+                        Finalize Report
+                    </button>
+</div>
+</div>
+<!-- Bento Grid Structure -->
+<div class="grid grid-cols-12 gap-gutter mb-xl">
+<!-- Clinical Conclusion Card (Wide) -->
+<div class="col-span-12 bg-primary-container hairline-all rounded-lg p-xl flex items-start gap-lg relative overflow-hidden">
+<div class="absolute top-0 left-0 w-1 h-full bg-secondary-container"></div>
+<span class="material-symbols-outlined text-[32px] text-secondary-container mt-xs">format_quote</span>
+<div class="flex flex-col gap-sm">
+<div class="font-label-caps text-label-caps text-on-tertiary-container">Primary Clinical Conclusion</div>
+<div class="font-clinical-conclusion text-clinical-conclusion text-inverse-on-surface max-w-4xl">
+                            "About 40 fewer events per 1000 patients."
+                        </div>
+</div>
+</div>
+<!-- Core Stats Cards -->
+<div class="col-span-8 grid grid-cols-2 gap-gutter">
+<!-- Risk Ratio -->
+<div class="col-span-1 bg-primary-container hairline-all rounded-lg p-xl flex flex-col justify-between">
+<div class="flex justify-between items-center mb-xl">
+<div class="font-label-caps text-label-caps text-on-tertiary-container">Pooled Risk Ratio</div>
+<span class="material-symbols-outlined text-on-tertiary-container text-[18px]">query_stats</span>
+</div>
+<div>
+<div class="font-data-mono text-display-lg text-inverse-on-surface mb-xs">0.81</div>
+<div class="font-data-mono text-data-mono text-on-tertiary-container">[95% CI 0.74–0.88]</div>
+</div>
+</div>
+<!-- Meta Data (GRADE & Het) -->
+<div class="col-span-1 flex flex-col gap-gutter">
+<!-- GRADE -->
+<div class="flex-1 bg-primary-container hairline-all rounded-lg p-lg flex justify-between items-center">
+<div class="font-label-caps text-label-caps text-on-tertiary-container">Certainty (GRADE)</div>
+<div class="flex items-center gap-sm">
+<span class="font-data-mono text-data-mono text-inverse-on-surface mr-xs">High</span>
+<div class="flex gap-[2px]">
+<div class="w-3 h-3 rounded-full bg-inverse-on-surface"></div>
+<div class="w-3 h-3 rounded-full bg-inverse-on-surface"></div>
+<div class="w-3 h-3 rounded-full bg-inverse-on-surface"></div>
+<div class="w-3 h-3 rounded-full bg-inverse-on-surface"></div>
+</div>
+</div>
+</div>
+<!-- Heterogeneity -->
+<div class="flex-1 bg-primary-container hairline-all rounded-lg p-lg flex justify-between items-center">
+<div class="font-label-caps text-label-caps text-on-tertiary-container">Heterogeneity</div>
+<div class="font-data-mono text-data-mono text-inverse-on-surface">
+                                I² = 17% <span class="text-on-tertiary-container ml-xs">(Low)</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Forest Plot Card -->
+<div class="col-span-12 bg-primary-container hairline-all rounded-lg p-xl flex flex-col h-[400px]">
+<div class="flex justify-between items-center mb-lg">
+<div class="font-label-caps text-label-caps text-on-tertiary-container">Forest Plot Analysis (Log Scale)</div>
+<div class="flex gap-md font-data-mono text-data-mono text-on-tertiary-container text-[11px]">
+<span>Events: 142/2800</span>
+<span>Control: 201/2750</span>
+</div>
+</div>
+<!-- Plot Canvas Area -->
+<div class="flex-1 relative w-full hairline-all bg-tertiary overflow-hidden flex flex-col">
+<!-- Grid lines -->
+<div class="absolute inset-0 flex justify-between px-[10%] opacity-20 pointer-events-none">
+<div class="h-full w-[1px] bg-outline"></div>
+<div class="h-full w-[1px] bg-outline"></div>
+<div class="h-full w-[1px] bg-outline"></div>
+<div class="h-full w-[1px] bg-outline"></div>
+<div class="h-full w-[1px] bg-outline"></div>
+</div>
+<!-- Center Line of No Effect (1.0) -->
+<div class="absolute top-0 bottom-8 left-[60%] w-[1px] border-l border-dashed border-outline-variant z-10"></div>
+<!-- Data Rows (Simulated) -->
+<div class="flex-1 flex flex-col justify-around py-md z-20 px-[10%]">
+<!-- Trial 1 -->
+<div class="relative w-full h-6 flex items-center group">
+<div class="absolute left-[-8%] font-data-mono text-data-mono text-[11px] text-on-tertiary-container group-hover:text-inverse-on-surface">Trial Alpha</div>
+<div class="absolute left-[30%] right-[35%] h-[1px] bg-inverse-surface"></div>
+<div class="absolute left-[40%] w-3 h-3 bg-inverse-on-surface rotate-45 transform -translate-y-1/2 top-1/2"></div>
+</div>
+<!-- Trial 2 -->
+<div class="relative w-full h-6 flex items-center group">
+<div class="absolute left-[-8%] font-data-mono text-data-mono text-[11px] text-on-tertiary-container group-hover:text-inverse-on-surface">Trial Beta</div>
+<div class="absolute left-[40%] right-[20%] h-[1px] bg-inverse-surface"></div>
+<div class="absolute left-[48%] w-4 h-4 bg-inverse-on-surface rotate-45 transform -translate-y-1/2 top-1/2"></div>
+</div>
+<!-- Trial 3 -->
+<div class="relative w-full h-6 flex items-center group">
+<div class="absolute left-[-8%] font-data-mono text-data-mono text-[11px] text-on-tertiary-container group-hover:text-inverse-on-surface">Trial Gamma</div>
+<div class="absolute left-[25%] right-[45%] h-[1px] bg-inverse-surface"></div>
+<div class="absolute left-[32%] w-2 h-2 bg-inverse-on-surface rotate-45 transform -translate-y-1/2 top-1/2"></div>
+</div>
+<!-- Pooled Result Diamond -->
+<div class="relative w-full h-10 mt-md flex items-center hairline-t pt-sm">
+<div class="absolute left-[-8%] font-label-caps text-label-caps text-secondary-container">Overall (I²=17%)</div>
+<!-- Diamond SVG (Pooled) -->
+<div class="absolute left-[42%] top-1/2 transform -translate-y-1/2 flex items-center justify-center">
+<svg class="fill-secondary-container opacity-90 drop-shadow-md" height="20" viewbox="0 0 40 20" width="40">
+<polygon points="20,0 40,10 20,20 0,10"></polygon>
+</svg>
+</div>
+</div>
+</div>
+<!-- X Axis Labels -->
+<div class="h-8 hairline-t flex justify-between px-[10%] items-center font-data-mono text-[10px] text-on-tertiary-container bg-primary-container">
+<span>0.1</span>
+<span>0.5</span>
+<span class="text-inverse-on-surface">1.0</span>
+<span>2.0</span>
+<span>10.0</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Provenance Drawer (Open State) -->
+<aside class="w-[340px] bg-primary-container hairline-l flex flex-col h-full shrink-0">
+<!-- Drawer Header -->
+<div class="h-16 px-lg flex items-center justify-between hairline-b bg-tertiary-container">
+<div class="flex items-center gap-sm text-inverse-on-surface">
+<span class="material-symbols-outlined text-[20px]">account_tree</span>
+<span class="font-label-caps text-label-caps mt-[2px]">Provenance Drawer</span>
+</div>
+<button class="text-on-tertiary-container hover:text-inverse-on-surface transition-colors">
+<span class="material-symbols-outlined text-[20px]">close_fullscreen</span>
+</button>
+</div>
+<!-- Drawer Content -->
+<div class="flex-1 overflow-y-auto p-lg flex flex-col gap-lg">
+<p class="font-body-md text-body-md text-on-tertiary-container mb-xs">
+                    Traceability logs for the current pooled risk ratio calculation.
+                </p>
+<!-- Log Entry 1 -->
+<div class="border-l-2 border-secondary-container pl-md pb-md relative">
+<div class="absolute -left-[7px] top-0 w-3 h-3 rounded-full bg-secondary-container ring-4 ring-primary-container"></div>
+<div class="font-label-caps text-label-caps text-inverse-on-surface mb-xs">Final Synthesis</div>
+<div class="font-data-mono text-data-mono text-[11px] text-on-tertiary-container mb-sm">SYS: 2023-10-24 14:02:11Z</div>
+<div class="bg-tertiary hairline-all p-sm rounded-DEFAULT font-data-mono text-data-mono text-[12px] text-inverse-on-surface">
+                        Method: Mantel-Haenszel<br/>
+                        Model: Random Effects<br/>
+                        Tau²: 0.04
+                    </div>
+</div>
+<!-- Log Entry 2 -->
+<div class="border-l-2 border-outline pl-md pb-md relative">
+<div class="absolute -left-[7px] top-0 w-3 h-3 rounded-full bg-outline ring-4 ring-primary-container"></div>
+<div class="font-label-caps text-label-caps text-inverse-on-surface mb-xs">Data Extraction Verified</div>
+<div class="font-data-mono text-data-mono text-[11px] text-on-tertiary-container mb-sm">USR: Dr. E. Cross • 13:45:00Z</div>
+<div class="bg-tertiary hairline-all p-sm rounded-DEFAULT font-body-md text-body-md text-[13px] text-on-tertiary-container">
+                        Manual override on Trial Beta control arm n=250.
+                    </div>
+</div>
+<!-- Log Entry 3 -->
+<div class="border-l-2 border-outline pl-md pb-md relative">
+<div class="absolute -left-[7px] top-0 w-3 h-3 rounded-full bg-outline ring-4 ring-primary-container"></div>
+<div class="font-label-caps text-label-caps text-inverse-on-surface mb-xs">NLP Ingestion</div>
+<div class="font-data-mono text-data-mono text-[11px] text-on-tertiary-container mb-sm">SYS: 2023-10-23 09:12:00Z</div>
+<div class="bg-tertiary hairline-all p-sm rounded-DEFAULT font-data-mono text-data-mono text-[12px] text-on-tertiary-container opacity-70">
+                        Parsed 4 full-text PDFs.<br/>
+                        Confidence: 98.4%
+                    </div>
+</div>
+</div>
+<!-- Drawer Footer -->
+<div class="p-lg hairline-t bg-tertiary-container">
+<button class="w-full py-sm border-[0.5px] border-inverse-surface text-inverse-on-surface font-label-caps text-label-caps hover:bg-inverse-surface transition-colors rounded-DEFAULT flex items-center justify-center gap-xs">
+<span class="material-symbols-outlined text-[16px]">download</span>
+                    Export Log
+                </button>
+</div>
+</aside>
+</main>
+</body></html>

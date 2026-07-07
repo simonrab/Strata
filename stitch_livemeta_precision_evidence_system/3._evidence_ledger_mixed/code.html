@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Evidence Ledger - LiveMeta</title>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400&amp;family=Source+Serif+4:wght@400&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Tailwind Configuration -->
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                            "surface-variant": "#e2e2e2",
+                            "surface-container": "#eeeeee",
+                            "secondary-fixed-dim": "#b4c5ff",
+                            "on-primary-fixed-variant": "#454747",
+                            "surface-container-high": "#e8e8e8",
+                            "inverse-on-surface": "#f1f1f1",
+                            "surface-tint": "#5d5f5e",
+                            "outline-variant": "#c4c7c7",
+                            "outline": "#747878",
+                            "error-container": "#ffdad6",
+                            "on-error": "#ffffff",
+                            "on-secondary-fixed-variant": "#003ea8",
+                            "on-secondary-fixed": "#00174b",
+                            "tertiary": "#000000",
+                            "on-background": "#1a1c1c",
+                            "on-tertiary-fixed-variant": "#454747",
+                            "on-secondary-container": "#fefcff",
+                            "inverse-surface": "#2f3131",
+                            "on-primary-fixed": "#1a1c1c",
+                            "tertiary-container": "#1a1c1c",
+                            "surface-container-lowest": "#ffffff",
+                            "surface-bright": "#f9f9f9",
+                            "primary-fixed-dim": "#c6c6c6",
+                            "on-tertiary": "#ffffff",
+                            "on-error-container": "#93000a",
+                            "tertiary-fixed-dim": "#c6c6c6",
+                            "surface-dim": "#dadada",
+                            "surface-container-low": "#f3f3f3",
+                            "primary": "#000000",
+                            "on-primary": "#ffffff",
+                            "on-secondary": "#ffffff",
+                            "on-surface": "#1a1c1c",
+                            "secondary": "#0051d5",
+                            "inverse-primary": "#c6c6c6",
+                            "primary-fixed": "#e2e2e2",
+                            "surface-container-highest": "#e2e2e2",
+                            "tertiary-fixed": "#e2e2e2",
+                            "secondary-fixed": "#dbe1ff",
+                            "on-surface-variant": "#434747",
+                            "background": "#f9f9f9",
+                            "on-tertiary-fixed": "#1a1c1c",
+                            "secondary-container": "#316bf3",
+                            "on-tertiary-container": "#838484",
+                            "primary-container": "#1a1c1c",
+                            "error": "#ba1a1a",
+                            "surface": "#f9f9f9",
+                            "on-primary-container": "#838484"
+                    },
+                    "borderRadius": {
+                            "DEFAULT": "0.25rem",
+                            "lg": "0.5rem",
+                            "xl": "0.75rem",
+                            "full": "9999px"
+                    },
+                    "spacing": {
+                            "sm": "8px",
+                            "lg": "16px",
+                            "xl": "24px",
+                            "md": "12px",
+                            "margin-mobile": "16px",
+                            "xs": "4px",
+                            "gutter": "24px",
+                            "xxl": "32px",
+                            "margin-desktop": "32px"
+                    },
+                    "fontFamily": {
+                            "section-sm": ["Inter"],
+                            "clinical-conclusion": ["\"Source Serif 4\""],
+                            "body-md": ["Inter"],
+                            "headline-md": ["Inter"],
+                            "data-mono": ["JetBrains Mono"],
+                            "label-caps": ["Inter"],
+                            "display-lg": ["Inter"]
+                    },
+                    "fontSize": {
+                            "section-sm": ["16px", {"lineHeight": "24px", "fontWeight": "500"}],
+                            "clinical-conclusion": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                            "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                            "headline-md": ["20px", {"lineHeight": "28px", "fontWeight": "500"}],
+                            "data-mono": ["13px", {"lineHeight": "18px", "fontWeight": "400"}],
+                            "label-caps": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                            "display-lg": ["32px", {"lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "600"}]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { background-color: #F9F9F9; } /* Level 0 Canvas */
+        .hairline-b { border-bottom: 0.5px solid #E5E5E5; }
+        .hairline-t { border-top: 0.5px solid #E5E5E5; }
+        .hairline-l { border-left: 0.5px solid #E5E5E5; }
+        .hairline-r { border-right: 0.5px solid #E5E5E5; }
+        .hairline-all { border: 0.5px solid #E5E5E5; }
+        
+        .pip-green { background-color: #10B981; }
+        .pip-gray { background-color: #D1D5DB; }
+        
+        .tag-pooled { background-color: #E0F2FE; color: #0369A1; border: 0.5px solid #BAE6FD; }
+        .tag-review { background-color: #FEF3C7; color: #D97706; border: 0.5px solid #FDE68A; }
+    </style>
+</head>
+<body class="antialiased text-on-surface flex bg-background">
+<!-- Desktop SideNavBar -->
+<aside class="hidden md:flex flex-col bg-surface-container-low border-r border-outline-variant h-screen w-64 fixed left-0 top-0 py-xl z-40">
+<div class="px-lg mb-xl flex items-center gap-md">
+<span class="material-symbols-outlined text-secondary text-2xl" data-weight="fill" style="font-variation-settings: 'FILL' 1;">terminal</span>
+<div>
+<h1 class="font-headline-md text-headline-md text-on-surface font-bold tracking-tight">LiveMeta</h1>
+<p class="font-label-caps text-label-caps text-on-surface-variant">Clinical Terminal</p>
+</div>
+</div>
+<nav class="flex-1 px-sm">
+<ul class="space-y-xs">
+<li>
+<a class="flex items-center gap-md px-md py-sm rounded-md text-on-surface-variant hover:bg-surface-container-high transition-colors font-label-caps text-label-caps" href="#">
+<span class="material-symbols-outlined text-lg">help_outline</span>
+<span>Ask</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-md px-md py-sm rounded-md text-secondary border-r-2 border-secondary font-label-caps text-label-caps bg-surface-container-high" href="#">
+<span class="material-symbols-outlined text-lg">database</span>
+<span>Evidence</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-md px-md py-sm rounded-md text-on-surface-variant hover:bg-surface-container-high transition-colors font-label-caps text-label-caps" href="#">
+<span class="material-symbols-outlined text-lg">description</span>
+<span>Report</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-md px-md py-sm rounded-md text-on-surface-variant hover:bg-surface-container-high transition-colors font-label-caps text-label-caps" href="#">
+<span class="material-symbols-outlined text-lg">sync</span>
+<span>Updates</span>
+</a>
+</li>
+</ul>
+</nav>
+<div class="px-sm mt-auto">
+<ul class="space-y-xs">
+<li>
+<a class="flex items-center gap-md px-md py-sm rounded-md text-on-surface-variant hover:bg-surface-container-high transition-colors font-label-caps text-label-caps" href="#">
+<span class="material-symbols-outlined text-lg">gavel</span>
+<span>Risk of Bias</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-md px-md py-sm rounded-md text-on-surface-variant hover:bg-surface-container-high transition-colors font-label-caps text-label-caps" href="#">
+<span class="material-symbols-outlined text-lg">analytics</span>
+<span>GRADE Detail</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-md px-md py-sm rounded-md text-on-surface-variant hover:bg-surface-container-high transition-colors font-label-caps text-label-caps" href="#">
+<span class="material-symbols-outlined text-lg">history</span>
+<span>Audit Trail</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-md px-md py-sm rounded-md text-on-surface-variant hover:bg-surface-container-high transition-colors font-label-caps text-label-caps" href="#">
+<span class="material-symbols-outlined text-lg">download</span>
+<span>Export</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-md px-md py-sm rounded-md text-on-surface-variant hover:bg-surface-container-high transition-colors font-label-caps text-label-caps" href="#">
+<span class="material-symbols-outlined text-lg">settings</span>
+<span>Settings</span>
+</a>
+</li>
+</ul>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="w-full md:pl-64 pt-16 md:pt-0 min-h-screen">
+<!-- Mobile Top Nav (visible only on mobile) -->
+<header class="md:hidden fixed top-0 w-full z-50 flex justify-between items-center px-lg h-16 bg-surface border-b border-outline-variant">
+<div class="flex items-center gap-sm">
+<span class="material-symbols-outlined text-on-surface">menu</span>
+<span class="font-headline-md text-headline-md font-bold text-on-surface">LiveMeta</span>
+</div>
+<div class="flex items-center gap-sm">
+<span class="material-symbols-outlined text-on-surface">search</span>
+<span class="material-symbols-outlined text-on-surface">notifications</span>
+</div>
+</header>
+<div class="p-margin-mobile md:p-margin-desktop max-w-7xl mx-auto space-y-xl">
+<!-- Page Header -->
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-md mb-xl">
+<div>
+<h2 class="font-display-lg text-display-lg text-on-background">Evidence Ledger</h2>
+<p class="font-body-md text-body-md text-on-surface-variant mt-xs">SGLT2 inhibitors vs Placebo in Heart Failure (LVEF ≤ 40%)</p>
+</div>
+<div class="flex gap-sm">
+<button class="px-md py-xs bg-surface-container-highest hover:bg-surface-dim transition-colors text-on-surface font-label-caps text-label-caps hairline-all rounded flex items-center gap-xs">
+<span class="material-symbols-outlined text-[16px]">filter_list</span>
+                        Filter
+                    </button>
+<button class="px-md py-xs bg-on-background text-on-primary hover:opacity-90 transition-opacity font-label-caps text-label-caps rounded flex items-center gap-xs">
+<span class="material-symbols-outlined text-[16px]">add</span>
+                        Add Trial
+                    </button>
+</div>
+</div>
+<!-- PRISMA Strip -->
+<section class="bg-surface-container-lowest hairline-all rounded-lg p-lg overflow-x-auto">
+<div class="flex items-center min-w-max gap-sm">
+<span class="font-label-caps text-label-caps text-on-surface-variant w-16 text-right">PRISMA</span>
+<div class="h-4 w-px bg-outline-variant mx-sm"></div>
+<div class="flex items-center gap-sm">
+<div class="flex flex-col items-center">
+<span class="font-data-mono text-data-mono font-medium text-on-background">27</span>
+<span class="font-label-caps text-[10px] text-on-surface-variant mt-1">IDENTIFIED</span>
+</div>
+<span class="material-symbols-outlined text-outline-variant text-sm mx-sm">arrow_forward</span>
+<div class="flex flex-col items-center">
+<span class="font-data-mono text-data-mono font-medium text-on-background">11</span>
+<span class="font-label-caps text-[10px] text-on-surface-variant mt-1">SCREENED</span>
+</div>
+<span class="material-symbols-outlined text-outline-variant text-sm mx-sm">arrow_forward</span>
+<div class="flex flex-col items-center">
+<span class="font-data-mono text-data-mono font-medium text-on-background">4</span>
+<span class="font-label-caps text-[10px] text-on-surface-variant mt-1">ASSESSED</span>
+</div>
+<span class="material-symbols-outlined text-outline-variant text-sm mx-sm">arrow_forward</span>
+<div class="flex flex-col items-center">
+<span class="font-data-mono text-data-mono font-bold text-secondary">2</span>
+<span class="font-label-caps text-[10px] text-secondary mt-1">POOLED</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Data Table / List -->
+<section class="bg-surface-container-lowest hairline-all rounded-lg overflow-hidden">
+<!-- Table Header -->
+<div class="grid grid-cols-12 gap-sm p-md bg-surface-container-low hairline-b items-center">
+<div class="col-span-5 md:col-span-3 font-label-caps text-label-caps text-on-surface-variant">Trial ID</div>
+<div class="col-span-4 md:col-span-4 font-label-caps text-label-caps text-on-surface-variant hidden md:block">Intervention vs Control (Events/Total)</div>
+<div class="col-span-4 md:col-span-2 font-label-caps text-label-caps text-on-surface-variant text-center">Status</div>
+<div class="col-span-3 md:col-span-3 font-label-caps text-label-caps text-on-surface-variant text-right">RoB Assessment</div>
+</div>
+<!-- Row 1: DAPA-HF -->
+<div class="grid grid-cols-12 gap-sm p-md hairline-b hover:bg-surface-bright transition-colors cursor-pointer group items-center">
+<div class="col-span-5 md:col-span-3 flex flex-col">
+<span class="font-section-sm text-section-sm text-on-background group-hover:text-secondary transition-colors">DAPA-HF</span>
+<span class="font-data-mono text-[11px] text-on-surface-variant mt-1">NCT03036124</span>
+</div>
+<div class="col-span-12 md:col-span-4 flex items-center md:block order-last md:order-none mt-sm md:mt-0">
+<span class="md:hidden font-label-caps text-[10px] text-on-surface-variant mr-2">DATA:</span>
+<div class="flex items-center gap-xs font-data-mono text-data-mono text-on-background">
+<span class="px-xs py-[2px] bg-surface-container hairline-all rounded">386/2373</span>
+<span class="text-on-surface-variant">vs</span>
+<span class="px-xs py-[2px] bg-surface-container hairline-all rounded">502/2371</span>
+</div>
+</div>
+<div class="col-span-4 md:col-span-2 flex justify-center">
+<span class="tag-pooled px-sm py-[2px] rounded-full font-label-caps text-[10px] flex items-center gap-xs">
+<span class="material-symbols-outlined text-[12px]">check_circle</span>
+                            Pooled
+                        </span>
+</div>
+<div class="col-span-3 md:col-span-3 flex justify-end items-center gap-xs">
+<span class="font-label-caps text-[10px] text-on-surface-variant mr-xs hidden md:inline">LOW</span>
+<div class="flex gap-[2px] hairline-all p-[2px] rounded bg-white">
+<div class="w-1.5 h-3 rounded-[1px] pip-green"></div>
+<div class="w-1.5 h-3 rounded-[1px] pip-green"></div>
+<div class="w-1.5 h-3 rounded-[1px] pip-green"></div>
+<div class="w-1.5 h-3 rounded-[1px] pip-green"></div>
+<div class="w-1.5 h-3 rounded-[1px] pip-green"></div>
+</div>
+</div>
+</div>
+<!-- Row 2: DELIVER -->
+<div class="grid grid-cols-12 gap-sm p-md hairline-b hover:bg-surface-bright transition-colors cursor-pointer group items-center">
+<div class="col-span-5 md:col-span-3 flex flex-col">
+<span class="font-section-sm text-section-sm text-on-background group-hover:text-secondary transition-colors">DELIVER</span>
+<span class="font-data-mono text-[11px] text-on-surface-variant mt-1">NCT03619213</span>
+</div>
+<div class="col-span-12 md:col-span-4 flex items-center md:block order-last md:order-none mt-sm md:mt-0">
+<span class="md:hidden font-label-caps text-[10px] text-on-surface-variant mr-2">DATA:</span>
+<div class="flex items-center gap-xs font-data-mono text-data-mono text-on-background">
+<span class="px-xs py-[2px] bg-surface-container hairline-all rounded">512/3131</span>
+<span class="text-on-surface-variant">vs</span>
+<span class="px-xs py-[2px] bg-surface-container hairline-all rounded">610/3132</span>
+</div>
+</div>
+<div class="col-span-4 md:col-span-2 flex justify-center">
+<span class="tag-pooled px-sm py-[2px] rounded-full font-label-caps text-[10px] flex items-center gap-xs">
+<span class="material-symbols-outlined text-[12px]">check_circle</span>
+                            Pooled
+                        </span>
+</div>
+<div class="col-span-3 md:col-span-3 flex justify-end items-center gap-xs">
+<span class="font-label-caps text-[10px] text-on-surface-variant mr-xs hidden md:inline">LOW</span>
+<div class="flex gap-[2px] hairline-all p-[2px] rounded bg-white">
+<div class="w-1.5 h-3 rounded-[1px] pip-green"></div>
+<div class="w-1.5 h-3 rounded-[1px] pip-green"></div>
+<div class="w-1.5 h-3 rounded-[1px] pip-green"></div>
+<div class="w-1.5 h-3 rounded-[1px] pip-green"></div>
+<div class="w-1.5 h-3 rounded-[1px] pip-green"></div>
+</div>
+</div>
+</div>
+<!-- Row 3: EMPEROR-Reduced -->
+<div class="grid grid-cols-12 gap-sm p-md hairline-b hover:bg-surface-bright transition-colors cursor-pointer group items-center bg-surface-bright/50">
+<div class="col-span-5 md:col-span-3 flex flex-col">
+<span class="font-section-sm text-section-sm text-on-background group-hover:text-secondary transition-colors">EMPEROR-Reduced</span>
+<span class="font-data-mono text-[11px] text-on-surface-variant mt-1">NCT03057977</span>
+</div>
+<div class="col-span-12 md:col-span-4 flex items-center md:block order-last md:order-none mt-sm md:mt-0">
+<span class="font-data-mono text-[11px] text-outline italic">Outcome reported only as survival curve</span>
+</div>
+<div class="col-span-4 md:col-span-2 flex justify-center">
+<span class="tag-review px-sm py-[2px] rounded-full font-label-caps text-[10px] flex items-center gap-xs">
+<span class="material-symbols-outlined text-[12px]">pending</span>
+                            Review
+                        </span>
+</div>
+<div class="col-span-3 md:col-span-3 flex justify-end items-center gap-xs">
+<span class="font-label-caps text-[10px] text-outline-variant mr-xs hidden md:inline">PENDING</span>
+<div class="flex gap-[2px] hairline-all p-[2px] rounded bg-white opacity-50">
+<div class="w-1.5 h-3 rounded-[1px] pip-gray"></div>
+<div class="w-1.5 h-3 rounded-[1px] pip-gray"></div>
+<div class="w-1.5 h-3 rounded-[1px] pip-gray"></div>
+<div class="w-1.5 h-3 rounded-[1px] pip-gray"></div>
+<div class="w-1.5 h-3 rounded-[1px] pip-gray"></div>
+</div>
+</div>
+</div>
+<!-- Row 4: EMPEROR-Preserved -->
+<div class="grid grid-cols-12 gap-sm p-md hover:bg-surface-bright transition-colors cursor-pointer group items-center bg-surface-bright/50">
+<div class="col-span-5 md:col-span-3 flex flex-col">
+<span class="font-section-sm text-section-sm text-on-background group-hover:text-secondary transition-colors">EMPEROR-Preserved</span>
+<span class="font-data-mono text-[11px] text-on-surface-variant mt-1">NCT03057951</span>
+</div>
+<div class="col-span-12 md:col-span-4 flex items-center md:block order-last md:order-none mt-sm md:mt-0">
+<span class="font-data-mono text-[11px] text-outline italic">Extraction pending</span>
+</div>
+<div class="col-span-4 md:col-span-2 flex justify-center">
+<span class="tag-review px-sm py-[2px] rounded-full font-label-caps text-[10px] flex items-center gap-xs">
+<span class="material-symbols-outlined text-[12px]">pending</span>
+                            Review
+                        </span>
+</div>
+<div class="col-span-3 md:col-span-3 flex justify-end items-center gap-xs">
+<span class="font-label-caps text-[10px] text-outline-variant mr-xs hidden md:inline">PENDING</span>
+<div class="flex gap-[2px] hairline-all p-[2px] rounded bg-white opacity-50">
+<div class="w-1.5 h-3 rounded-[1px] pip-gray"></div>
+<div class="w-1.5 h-3 rounded-[1px] pip-gray"></div>
+<div class="w-1.5 h-3 rounded-[1px] pip-gray"></div>
+<div class="w-1.5 h-3 rounded-[1px] pip-gray"></div>
+<div class="w-1.5 h-3 rounded-[1px] pip-gray"></div>
+</div>
+</div>
+</div>
+</section>
+</div>
+</main>
+</body></html>

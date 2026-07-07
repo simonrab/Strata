@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Risk of Bias Assessment - LiveMeta</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@400&amp;family=Source+Serif+4:ital,wght@0,400;1,400&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "surface-variant": "#e2e2e2",
+                        "surface-container": "#eeeeee",
+                        "secondary-fixed-dim": "#b4c5ff",
+                        "on-primary-fixed-variant": "#454747",
+                        "surface-container-high": "#e8e8e8",
+                        "inverse-on-surface": "#f1f1f1",
+                        "surface-tint": "#5d5f5e",
+                        "outline-variant": "#c4c7c7",
+                        "outline": "#747878",
+                        "error-container": "#ffdad6",
+                        "on-error": "#ffffff",
+                        "on-secondary-fixed-variant": "#003ea8",
+                        "on-secondary-fixed": "#00174b",
+                        "tertiary": "#000000",
+                        "on-background": "#1a1c1c",
+                        "on-tertiary-fixed-variant": "#454747",
+                        "on-secondary-container": "#fefcff",
+                        "inverse-surface": "#2f3131",
+                        "on-primary-fixed": "#1a1c1c",
+                        "tertiary-container": "#1a1c1c",
+                        "surface-container-lowest": "#ffffff",
+                        "surface-bright": "#f9f9f9",
+                        "primary-fixed-dim": "#c6c6c6",
+                        "on-tertiary": "#ffffff",
+                        "on-error-container": "#93000a",
+                        "tertiary-fixed-dim": "#c6c6c6",
+                        "surface-dim": "#dadada",
+                        "surface-container-low": "#f3f3f3",
+                        "primary": "#000000",
+                        "on-primary": "#ffffff",
+                        "on-secondary": "#ffffff",
+                        "on-surface": "#1a1c1c",
+                        "secondary": "#0051d5",
+                        "inverse-primary": "#c6c6c6",
+                        "primary-fixed": "#e2e2e2",
+                        "surface-container-highest": "#e2e2e2",
+                        "tertiary-fixed": "#e2e2e2",
+                        "secondary-fixed": "#dbe1ff",
+                        "on-surface-variant": "#434747",
+                        "background": "#f9f9f9",
+                        "on-tertiary-fixed": "#1a1c1c",
+                        "secondary-container": "#316bf3",
+                        "on-tertiary-container": "#838484",
+                        "primary-container": "#1a1c1c",
+                        "error": "#ba1a1a",
+                        "surface": "#f9f9f9",
+                        "on-primary-container": "#838484"
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    spacing: {
+                        "sm": "8px",
+                        "lg": "16px",
+                        "xl": "24px",
+                        "md": "12px",
+                        "margin-mobile": "16px",
+                        "xs": "4px",
+                        "gutter": "24px",
+                        "xxl": "32px",
+                        "margin-desktop": "32px"
+                    },
+                    fontFamily: {
+                        "section-sm": ["Inter"],
+                        "clinical-conclusion": ["\"Source Serif 4\""],
+                        "body-md": ["Inter"],
+                        "headline-md": ["Inter"],
+                        "data-mono": ["JetBrains Mono"],
+                        "label-caps": ["Inter"],
+                        "display-lg": ["Inter"]
+                    },
+                    fontSize: {
+                        "section-sm": ["16px", { lineHeight: "24px", fontWeight: "500" }],
+                        "clinical-conclusion": ["18px", { lineHeight: "28px", fontWeight: "400" }],
+                        "body-md": ["14px", { lineHeight: "20px", fontWeight: "400" }],
+                        "headline-md": ["20px", { lineHeight: "28px", fontWeight: "500" }],
+                        "data-mono": ["13px", { lineHeight: "18px", fontWeight: "400" }],
+                        "label-caps": ["12px", { lineHeight: "16px", letterSpacing: "0.05em", fontWeight: "600" }],
+                        "display-lg": ["32px", { lineHeight: "1.2", letterSpacing: "-0.02em", fontWeight: "600" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .hairline-b { border-bottom: 0.5px solid theme('colors.outline-variant'); }
+        .hairline-r { border-right: 0.5px solid theme('colors.outline-variant'); }
+        .hairline-all { border: 0.5px solid theme('colors.outline-variant'); }
+        
+        /* Semantic Colors based on Guidance */
+        .risk-low-bg { background-color: #ecfdf5; }
+        .risk-low-text { color: #047857; }
+        .risk-some-bg { background-color: #fffbeb; }
+        .risk-some-text { color: #b45309; }
+        .risk-high-bg { background-color: #fef2f2; }
+        .risk-high-text { color: #b91c1c; }
+    </style>
+</head>
+<body class="bg-background text-on-surface font-body-md min-h-screen flex antialiased">
+<nav class="fixed left-0 top-0 h-full w-64 flex flex-col py-xl bg-surface-container-low dark:bg-tertiary-container border-r border-outline-variant dark:border-outline z-40 hidden md:flex">
+<div class="px-lg mb-xl flex items-center gap-md">
+<div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-on-primary">
+<span class="material-symbols-outlined text-sm" data-icon="terminal">terminal</span>
+</div>
+<div>
+<div class="font-headline-md text-headline-md text-on-surface dark:text-on-tertiary-fixed">LiveMeta</div>
+<div class="font-label-caps text-label-caps text-on-surface-variant">Clinical Terminal</div>
+</div>
+</div>
+<div class="flex-1 flex flex-col gap-xs px-sm">
+<a class="flex items-center gap-md px-md py-sm rounded-DEFAULT text-on-surface-variant dark:text-on-tertiary-fixed-variant hover:bg-surface-container-high dark:hover:bg-surface-variant font-label-caps text-label-caps transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="help_outline">help_outline</span>
+<span>Ask</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm rounded-DEFAULT text-on-surface-variant dark:text-on-tertiary-fixed-variant hover:bg-surface-container-high dark:hover:bg-surface-variant font-label-caps text-label-caps transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="database">database</span>
+<span>Evidence</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm rounded-DEFAULT text-on-surface-variant dark:text-on-tertiary-fixed-variant hover:bg-surface-container-high dark:hover:bg-surface-variant font-label-caps text-label-caps transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="description">description</span>
+<span>Report</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm rounded-DEFAULT text-on-surface-variant dark:text-on-tertiary-fixed-variant hover:bg-surface-container-high dark:hover:bg-surface-variant font-label-caps text-label-caps transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="sync">sync</span>
+<span>Updates</span>
+</a>
+</div>
+<div class="mt-auto flex flex-col gap-xs px-sm">
+<div class="px-md py-xs font-label-caps text-label-caps text-outline mb-xs mt-lg">Analysis</div>
+<a class="flex items-center gap-md px-md py-sm rounded-DEFAULT text-secondary dark:text-secondary-fixed-dim border-r-2 border-secondary dark:border-secondary-fixed-dim bg-surface-container-high font-label-caps text-label-caps scale-95 transition-transform origin-left" href="#">
+<span class="material-symbols-outlined" data-icon="gavel" data-weight="fill" style="font-variation-settings: 'FILL' 1;">gavel</span>
+<span>Risk of Bias</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm rounded-DEFAULT text-on-surface-variant dark:text-on-tertiary-fixed-variant hover:bg-surface-container-high dark:hover:bg-surface-variant font-label-caps text-label-caps transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="analytics">analytics</span>
+<span>GRADE Detail</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm rounded-DEFAULT text-on-surface-variant dark:text-on-tertiary-fixed-variant hover:bg-surface-container-high dark:hover:bg-surface-variant font-label-caps text-label-caps transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="history">history</span>
+<span>Audit Trail</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm rounded-DEFAULT text-on-surface-variant dark:text-on-tertiary-fixed-variant hover:bg-surface-container-high dark:hover:bg-surface-variant font-label-caps text-label-caps transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="download">download</span>
+<span>Export</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm rounded-DEFAULT text-on-surface-variant dark:text-on-tertiary-fixed-variant hover:bg-surface-container-high dark:hover:bg-surface-variant font-label-caps text-label-caps transition-colors mt-sm border-t border-[0.5px] border-outline-variant pt-sm" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span>Settings</span>
+</a>
+</div>
+</nav>
+<main class="flex-1 md:ml-64 p-margin-mobile md:p-margin-desktop bg-background w-full max-w-[1440px] mx-auto overflow-x-hidden">
+<header class="mb-xl flex flex-col md:flex-row md:items-start justify-between gap-lg">
+<div>
+<div class="flex items-center gap-md mb-xs">
+<span class="font-label-caps text-label-caps text-outline tracking-wider">DOMAIN ASSESSMENT</span>
+</div>
+<h1 class="font-display-lg text-display-lg text-on-surface mb-sm">Risk of Bias (RoB 2)</h1>
+<p class="font-body-md text-body-md text-on-surface-variant flex items-center gap-xs">
+<span class="material-symbols-outlined text-[16px]" data-icon="memory">memory</span>
+                    RoB 2 algorithm applied via automated trial extraction.
+                </p>
+</div>
+<div class="flex items-center gap-sm bg-surface-container-lowest hairline-all rounded-DEFAULT px-md py-sm shadow-sm">
+<div class="flex flex-col">
+<span class="font-label-caps text-label-caps text-outline">Overall Judgment</span>
+<div class="flex items-center gap-xs mt-1">
+<div class="w-2 h-2 rounded-full risk-low-bg risk-low-text ring-2 ring-current ring-opacity-20"></div>
+<span class="font-section-sm text-section-sm text-on-surface">Low risk of bias</span>
+</div>
+</div>
+</div>
+</header>
+<section class="bg-surface-container-lowest hairline-all rounded-lg overflow-hidden flex flex-col w-full">
+<div class="grid grid-cols-1 md:grid-cols-12 gap-gutter px-lg py-md bg-surface-container-low hairline-b items-center hidden md:grid">
+<div class="col-span-2 font-label-caps text-label-caps text-on-surface-variant">Domain</div>
+<div class="col-span-1 font-label-caps text-label-caps text-on-surface-variant">Judgment</div>
+<div class="col-span-4 font-label-caps text-label-caps text-on-surface-variant">Algorithm Rationale</div>
+<div class="col-span-4 font-label-caps text-label-caps text-on-surface-variant">Source Quote</div>
+<div class="col-span-1 font-label-caps text-label-caps text-on-surface-variant text-right">Action</div>
+</div>
+<!-- Row 1 -->
+<div class="grid grid-cols-1 md:grid-cols-12 gap-y-sm md:gap-gutter px-lg py-lg hairline-b items-start hover:bg-surface-bright transition-colors group">
+<div class="col-span-1 md:col-span-2 flex flex-col gap-xs">
+<span class="font-section-sm text-section-sm text-on-surface">D1: Randomization</span>
+<span class="font-data-mono text-data-mono text-on-surface-variant text-[11px]">Process &amp; Allocation</span>
+</div>
+<div class="col-span-1 flex items-center gap-sm md:col-span-1">
+<div class="flex items-center justify-center w-6 h-6 rounded risk-low-bg risk-low-text font-data-mono font-bold">
+                        +
+                    </div>
+<span class="md:hidden font-label-caps text-label-caps text-outline">Low Risk</span>
+</div>
+<div class="col-span-1 md:col-span-4 font-body-md text-body-md text-on-surface">
+                    Allocation sequence was randomly generated and adequately concealed from investigators and participants until assignment.
+                </div>
+<div class="col-span-1 md:col-span-4 font-clinical-conclusion text-clinical-conclusion text-on-surface-variant italic pl-md border-l-2 border-outline-variant">
+                    "Participants were randomly assigned via a centralized, computer-generated schedule managed by an independent statistician."
+                </div>
+<div class="col-span-1 flex items-center justify-end md:col-span-1 mt-sm md:mt-0">
+<button class="px-md py-xs hairline-all rounded-DEFAULT font-label-caps text-label-caps text-on-surface hover:bg-surface-container transition-colors focus:outline-none focus:ring-2 focus:ring-[#2563EB] focus:ring-offset-2">
+                        Verify
+                    </button>
+</div>
+</div>
+<!-- Row 2 -->
+<div class="grid grid-cols-1 md:grid-cols-12 gap-y-sm md:gap-gutter px-lg py-lg hairline-b items-start hover:bg-surface-bright transition-colors group">
+<div class="col-span-1 md:col-span-2 flex flex-col gap-xs">
+<span class="font-section-sm text-section-sm text-on-surface">D2: Deviations</span>
+<span class="font-data-mono text-data-mono text-on-surface-variant text-[11px]">Intended Interventions</span>
+</div>
+<div class="col-span-1 flex items-center gap-sm md:col-span-1">
+<div class="flex items-center justify-center w-6 h-6 rounded risk-some-bg risk-some-text font-data-mono font-bold">
+                        ?
+                    </div>
+<span class="md:hidden font-label-caps text-label-caps text-outline">Some Concerns</span>
+</div>
+<div class="col-span-1 md:col-span-4 font-body-md text-body-md text-on-surface">
+                    Minor deviations from assigned intervention were noted, but appropriate analysis (ITT) was utilized to estimate assignment effect.
+                </div>
+<div class="col-span-1 md:col-span-4 font-clinical-conclusion text-clinical-conclusion text-on-surface-variant italic pl-md border-l-2 border-outline-variant">
+                    "Three patients in the intervention arm received non-protocol adjunctive therapy; they were retained in the primary intention-to-treat analysis."
+                </div>
+<div class="col-span-1 flex items-center justify-end md:col-span-1 mt-sm md:mt-0">
+<button class="px-md py-xs hairline-all rounded-DEFAULT font-label-caps text-label-caps text-on-surface hover:bg-surface-container transition-colors focus:outline-none focus:ring-2 focus:ring-[#2563EB] focus:ring-offset-2">
+                        Verify
+                    </button>
+</div>
+</div>
+<!-- Row 3 -->
+<div class="grid grid-cols-1 md:grid-cols-12 gap-y-sm md:gap-gutter px-lg py-lg hairline-b items-start hover:bg-surface-bright transition-colors group">
+<div class="col-span-1 md:col-span-2 flex flex-col gap-xs">
+<span class="font-section-sm text-section-sm text-on-surface">D3: Missing data</span>
+<span class="font-data-mono text-data-mono text-on-surface-variant text-[11px]">Outcome Data</span>
+</div>
+<div class="col-span-1 flex items-center gap-sm md:col-span-1">
+<div class="flex items-center justify-center w-6 h-6 rounded risk-low-bg risk-low-text font-data-mono font-bold">
+                        +
+                    </div>
+<span class="md:hidden font-label-caps text-label-caps text-outline">Low Risk</span>
+</div>
+<div class="col-span-1 md:col-span-4 font-body-md text-body-md text-on-surface">
+                    Attrition was balanced across groups and total missing data was sufficiently low (&lt;5%) to not meaningfully impact the observed effect.
+                </div>
+<div class="col-span-1 md:col-span-4 font-clinical-conclusion text-clinical-conclusion text-on-surface-variant italic pl-md border-l-2 border-outline-variant">
+                    "Loss to follow-up was 4.2% overall (11/260 in group A, 10/255 in group B) with balanced reasons related to relocation."
+                </div>
+<div class="col-span-1 flex items-center justify-end md:col-span-1 mt-sm md:mt-0">
+<button class="px-md py-xs hairline-all rounded-DEFAULT font-label-caps text-label-caps text-on-surface hover:bg-surface-container transition-colors focus:outline-none focus:ring-2 focus:ring-[#2563EB] focus:ring-offset-2">
+                        Verify
+                    </button>
+</div>
+</div>
+<!-- Row 4 -->
+<div class="grid grid-cols-1 md:grid-cols-12 gap-y-sm md:gap-gutter px-lg py-lg hairline-b items-start hover:bg-surface-bright transition-colors group">
+<div class="col-span-1 md:col-span-2 flex flex-col gap-xs">
+<span class="font-section-sm text-section-sm text-on-surface">D4: Measurement</span>
+<span class="font-data-mono text-data-mono text-on-surface-variant text-[11px]">Outcome Measurement</span>
+</div>
+<div class="col-span-1 flex items-center gap-sm md:col-span-1">
+<div class="flex items-center justify-center w-6 h-6 rounded risk-low-bg risk-low-text font-data-mono font-bold">
+                        +
+                    </div>
+<span class="md:hidden font-label-caps text-label-caps text-outline">Low Risk</span>
+</div>
+<div class="col-span-1 md:col-span-4 font-body-md text-body-md text-on-surface">
+                    Primary outcome measurement was objective and outcome assessors were adequately blinded to intervention assignment.
+                </div>
+<div class="col-span-1 md:col-span-4 font-clinical-conclusion text-clinical-conclusion text-on-surface-variant italic pl-md border-l-2 border-outline-variant">
+                    "Radiological progression was independently assessed by two core laboratory radiologists masked to clinical data and treatment allocation."
+                </div>
+<div class="col-span-1 flex items-center justify-end md:col-span-1 mt-sm md:mt-0">
+<button class="px-md py-xs hairline-all rounded-DEFAULT font-label-caps text-label-caps text-on-surface hover:bg-surface-container transition-colors focus:outline-none focus:ring-2 focus:ring-[#2563EB] focus:ring-offset-2">
+                        Verify
+                    </button>
+</div>
+</div>
+<!-- Row 5 -->
+<div class="grid grid-cols-1 md:grid-cols-12 gap-y-sm md:gap-gutter px-lg py-lg items-start hover:bg-surface-bright transition-colors group">
+<div class="col-span-1 md:col-span-2 flex flex-col gap-xs">
+<span class="font-section-sm text-section-sm text-on-surface">D5: Selective reporting</span>
+<span class="font-data-mono text-data-mono text-on-surface-variant text-[11px]">Reported Result</span>
+</div>
+<div class="col-span-1 flex items-center gap-sm md:col-span-1">
+<div class="flex items-center justify-center w-6 h-6 rounded text-on-error bg-error font-data-mono font-bold shadow-sm">
+                        -
+                    </div>
+<span class="md:hidden font-label-caps text-label-caps text-outline">High Risk</span>
+</div>
+<div class="col-span-1 md:col-span-4 font-body-md text-body-md text-on-surface">
+                    Reported analysis deviates from the pre-specified protocol available on clinicaltrials.gov, particularly regarding the timepoint of primary assessment.
+                </div>
+<div class="col-span-1 md:col-span-4 font-clinical-conclusion text-clinical-conclusion text-on-surface-variant italic pl-md border-l-2 border-outline-variant">
+                    "Although the protocol specified 12-month follow-up for the primary endpoint, we report 6-month data here due to early separation of curves."
+                </div>
+<div class="col-span-1 flex items-center justify-end md:col-span-1 mt-sm md:mt-0">
+<button class="px-md py-xs hairline-all rounded-DEFAULT font-label-caps text-label-caps text-on-surface hover:bg-surface-container transition-colors focus:outline-none focus:ring-2 focus:ring-[#2563EB] focus:ring-offset-2">
+                        Verify
+                    </button>
+</div>
+</div>
+</section>
+</main>
+</body></html>

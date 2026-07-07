@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>LiveMeta - Reviews Dashboard</title>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;family=Source+Serif+4:opsz,wght@8..60,400&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Tailwind Configuration -->
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-variant": "#e2e2e2",
+                    "surface-container": "#eeeeee",
+                    "secondary-fixed-dim": "#b4c5ff",
+                    "on-primary-fixed-variant": "#454747",
+                    "surface-container-high": "#e8e8e8",
+                    "inverse-on-surface": "#f1f1f1",
+                    "surface-tint": "#5d5f5e",
+                    "outline-variant": "#c4c7c7",
+                    "outline": "#747878",
+                    "error-container": "#ffdad6",
+                    "on-error": "#ffffff",
+                    "on-secondary-fixed-variant": "#003ea8",
+                    "on-secondary-fixed": "#00174b",
+                    "tertiary": "#000000",
+                    "on-background": "#1a1c1c",
+                    "on-tertiary-fixed-variant": "#454747",
+                    "on-secondary-container": "#fefcff",
+                    "inverse-surface": "#2f3131",
+                    "on-primary-fixed": "#1a1c1c",
+                    "tertiary-container": "#1a1c1c",
+                    "surface-container-lowest": "#ffffff",
+                    "surface-bright": "#f9f9f9",
+                    "primary-fixed-dim": "#c6c6c6",
+                    "on-tertiary": "#ffffff",
+                    "on-error-container": "#93000a",
+                    "tertiary-fixed-dim": "#c6c6c6",
+                    "surface-dim": "#dadada",
+                    "surface-container-low": "#f3f3f3",
+                    "primary": "#000000",
+                    "on-primary": "#ffffff",
+                    "on-secondary": "#ffffff",
+                    "on-surface": "#1a1c1c",
+                    "secondary": "#0051d5",
+                    "inverse-primary": "#c6c6c6",
+                    "primary-fixed": "#e2e2e2",
+                    "surface-container-highest": "#e2e2e2",
+                    "tertiary-fixed": "#e2e2e2",
+                    "secondary-fixed": "#dbe1ff",
+                    "on-surface-variant": "#434747",
+                    "background": "#f9f9f9",
+                    "on-tertiary-fixed": "#1a1c1c",
+                    "secondary-container": "#316bf3",
+                    "on-tertiary-container": "#838484",
+                    "primary-container": "#1a1c1c",
+                    "error": "#ba1a1a",
+                    "surface": "#f9f9f9",
+                    "on-primary-container": "#838484"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "sm": "8px",
+                    "lg": "16px",
+                    "xl": "24px",
+                    "md": "12px",
+                    "margin-mobile": "16px",
+                    "xs": "4px",
+                    "gutter": "24px",
+                    "xxl": "32px",
+                    "margin-desktop": "32px"
+            },
+            "fontFamily": {
+                    "section-sm": [
+                            "Inter"
+                    ],
+                    "clinical-conclusion": [
+                            "\"Source Serif 4\""
+                    ],
+                    "body-md": [
+                            "Inter"
+                    ],
+                    "headline-md": [
+                            "Inter"
+                    ],
+                    "data-mono": [
+                            "JetBrains Mono"
+                    ],
+                    "label-caps": [
+                            "Inter"
+                    ],
+                    "display-lg": [
+                            "Inter"
+                    ]
+            },
+            "fontSize": {
+                    "section-sm": [
+                            "16px",
+                            {
+                                    "lineHeight": "24px",
+                                    "fontWeight": "500"
+                            }
+                    ],
+                    "clinical-conclusion": [
+                            "18px",
+                            {
+                                    "lineHeight": "28px",
+                                    "fontWeight": "400"
+                            }
+                    ],
+                    "body-md": [
+                            "14px",
+                            {
+                                    "lineHeight": "20px",
+                                    "fontWeight": "400"
+                            }
+                    ],
+                    "headline-md": [
+                            "20px",
+                            {
+                                    "lineHeight": "28px",
+                                    "fontWeight": "500"
+                            }
+                    ],
+                    "data-mono": [
+                            "13px",
+                            {
+                                    "lineHeight": "18px",
+                                    "fontWeight": "400"
+                            }
+                    ],
+                    "label-caps": [
+                            "12px",
+                            {
+                                    "lineHeight": "16px",
+                                    "letterSpacing": "0.05em",
+                                    "fontWeight": "600"
+                            }
+                    ],
+                    "display-lg": [
+                            "32px",
+                            {
+                                    "lineHeight": "1.2",
+                                    "letterSpacing": "-0.02em",
+                                    "fontWeight": "600"
+                            }
+                    ]
+            }
+    },
+        },
+      }
+    </script>
+<style>
+        /* Custom 0.5px hairline class */
+        .hairline-b { border-bottom: 1px solid #E5E5E5; }
+        .hairline-t { border-top: 1px solid #E5E5E5; }
+        .hairline-l { border-left: 1px solid #E5E5E5; }
+        .hairline-r { border-right: 1px solid #E5E5E5; }
+        .hairline { border: 1px solid #E5E5E5; }
+        
+        @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+            .hairline-b { border-bottom-width: 0.5px; }
+            .hairline-t { border-top-width: 0.5px; }
+            .hairline-l { border-left-width: 0.5px; }
+            .hairline-r { border-right-width: 0.5px; }
+            .hairline { border-width: 0.5px; }
+        }
+    </style>
+</head>
+<body class="bg-surface text-on-surface font-body-md antialiased h-screen overflow-hidden flex">
+<!-- SideNavBar (Desktop) -->
+<nav class="hidden md:flex bg-surface-container-low dark:bg-tertiary-container text-secondary dark:text-secondary-fixed font-label-caps text-label-caps fixed left-0 top-0 h-full w-64 flex-col py-xl border-r border-outline-variant dark:border-outline z-40">
+<!-- Brand -->
+<div class="px-xl mb-xxl flex items-center gap-md">
+<div class="w-8 h-8 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-bold font-headline-md text-headline-md shadow-sm border border-outline-variant">L</div>
+<div>
+<div class="font-headline-md text-headline-md text-on-surface dark:text-on-tertiary-fixed font-bold tracking-tight leading-none">LiveMeta</div>
+<div class="text-[10px] text-on-surface-variant uppercase tracking-widest mt-1 opacity-80">Clinical Terminal</div>
+</div>
+</div>
+<!-- Main Navigation -->
+<div class="flex-1 flex flex-col gap-1 px-md">
+<!-- Ask (Active) -->
+<a class="flex items-center gap-md px-md py-sm rounded-md bg-surface-container-high dark:bg-surface-variant text-secondary dark:text-secondary-fixed-dim border-l-2 border-secondary dark:border-secondary-fixed-dim bg-opacity-50" href="#">
+<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 1;">help_outline</span>
+<span>Ask</span>
+</a>
+<!-- Evidence (Inactive) -->
+<a class="flex items-center gap-md px-md py-sm rounded-md text-on-surface-variant dark:text-on-tertiary-fixed-variant hover:bg-surface-container-high dark:hover:bg-surface-variant transition-colors group" href="#">
+<span class="material-symbols-outlined text-[20px] group-hover:text-on-surface transition-colors">database</span>
+<span class="group-hover:text-on-surface transition-colors">Evidence</span>
+</a>
+<!-- Report (Inactive) -->
+<a class="flex items-center gap-md px-md py-sm rounded-md text-on-surface-variant dark:text-on-tertiary-fixed-variant hover:bg-surface-container-high dark:hover:bg-surface-variant transition-colors group" href="#">
+<span class="material-symbols-outlined text-[20px] group-hover:text-on-surface transition-colors">description</span>
+<span class="group-hover:text-on-surface transition-colors">Report</span>
+</a>
+<!-- Updates (Inactive) -->
+<a class="flex items-center gap-md px-md py-sm rounded-md text-on-surface-variant dark:text-on-tertiary-fixed-variant hover:bg-surface-container-high dark:hover:bg-surface-variant transition-colors group" href="#">
+<span class="material-symbols-outlined text-[20px] group-hover:text-on-surface transition-colors">sync</span>
+<span class="group-hover:text-on-surface transition-colors">Updates</span>
+</a>
+</div>
+<!-- Footer Navigation -->
+<div class="px-md flex flex-col gap-1 mt-auto pt-lg border-t border-outline-variant opacity-80">
+<a class="flex items-center gap-md px-md py-sm rounded-md text-on-surface-variant hover:bg-surface-container-high transition-colors group" href="#">
+<span class="material-symbols-outlined text-[16px]">gavel</span>
+<span>Risk of Bias</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm rounded-md text-on-surface-variant hover:bg-surface-container-high transition-colors group" href="#">
+<span class="material-symbols-outlined text-[16px]">analytics</span>
+<span>GRADE Detail</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm rounded-md text-on-surface-variant hover:bg-surface-container-high transition-colors group" href="#">
+<span class="material-symbols-outlined text-[16px]">history</span>
+<span>Audit Trail</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm rounded-md text-on-surface-variant hover:bg-surface-container-high transition-colors group" href="#">
+<span class="material-symbols-outlined text-[16px]">download</span>
+<span>Export</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm rounded-md text-on-surface-variant hover:bg-surface-container-high transition-colors group" href="#">
+<span class="material-symbols-outlined text-[16px]">settings</span>
+<span>Settings</span>
+</a>
+</div>
+</nav>
+<!-- Main Content Area -->
+<main class="flex-1 flex flex-col ml-0 md:ml-64 relative w-full overflow-hidden">
+<!-- TopNavBar (Mobile only for Dashboard intent, hidden links) -->
+<header class="md:hidden bg-surface dark:bg-primary-container text-primary dark:text-primary-fixed font-headline-md text-headline-md fixed top-0 w-full z-50 flex justify-between items-center px-lg h-16 border-b border-outline-variant dark:border-outline">
+<div class="font-headline-md text-headline-md font-bold text-on-surface dark:text-on-primary">LiveMeta</div>
+<!-- Actions -->
+<div class="flex items-center gap-sm">
+<button class="p-2 rounded-full text-on-surface-variant hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined">dark_mode</span>
+</button>
+<button class="p-2 rounded-full text-on-surface-variant hover:bg-surface-container transition-colors relative">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-error rounded-full"></span>
+</button>
+<img class="w-8 h-8 rounded-full border hairline ml-2 object-cover" data-alt="A small, professional headshot avatar of a medical researcher in a modern laboratory setting. Soft, natural lighting. Professional clinical aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAqUoQVBm7rpMwVW_W4AkLsesHh8kU_j8f8K8kH_kF4Iq_hA77UsScDUINnpM55O6-aPvhgVzQuan6dz5eY0d5pyKMbP50UktOYPMsnHCP6aIM2bQSVT2mssNK_0a-FFmzELQS4f0tW4iaZrIzlTttimqbxynhflJQvSYiO8zANLFkEei48zftxRNu9XyJiRk8oDpYdAgCvJ1pmDcY7727x1PpTnU3-zOX8C2sIrfVIl25PnEy_EI9I"/>
+</div>
+</header>
+<!-- Page Canvas -->
+<div class="flex-1 overflow-auto bg-background pt-16 md:pt-0 p-margin-mobile md:p-margin-desktop">
+<!-- Dashboard Header Area -->
+<div class="max-w-6xl mx-auto w-full mb-xxl flex flex-col md:flex-row md:items-end justify-between gap-xl">
+<div>
+<h1 class="font-display-lg text-display-lg text-on-background mb-md">Reviews Dashboard</h1>
+<p class="font-clinical-conclusion text-clinical-conclusion text-on-surface-variant">One conclusion has shifted since Monday.</p>
+</div>
+<button class="bg-on-background text-inverse-on-surface font-section-sm text-section-sm px-xl py-md rounded hover:opacity-90 transition-opacity flex items-center justify-center gap-sm shadow-sm h-fit">
+<span class="material-symbols-outlined text-[18px]">add</span>
+                    New Review
+                </button>
+</div>
+<!-- Data Table Container (Terminal Aesthetic) -->
+<div class="max-w-6xl mx-auto w-full bg-surface-container-lowest hairline rounded-lg overflow-hidden flex flex-col">
+<!-- Table Header -->
+<div class="grid grid-cols-12 gap-sm px-xl py-md bg-surface-container-low hairline-b items-center">
+<div class="col-span-12 md:col-span-5 font-label-caps text-label-caps text-on-surface-variant uppercase tracking-wider">Question</div>
+<div class="hidden md:block col-span-2 font-label-caps text-label-caps text-on-surface-variant uppercase tracking-wider text-right">Last Run</div>
+<div class="hidden md:block col-span-1 font-label-caps text-label-caps text-on-surface-variant uppercase tracking-wider text-right">Trials</div>
+<div class="hidden md:block col-span-2 font-label-caps text-label-caps text-on-surface-variant uppercase tracking-wider text-right">Estimate RR [95% CI]</div>
+<div class="hidden md:block col-span-2 font-label-caps text-label-caps text-on-surface-variant uppercase tracking-wider pl-lg">Status</div>
+</div>
+<!-- Table Body -->
+<div class="flex flex-col">
+<!-- Row 1: Amber / Shifted -->
+<div class="grid grid-cols-12 gap-sm px-xl py-lg hairline-b hover:bg-surface-bright transition-colors items-center group cursor-pointer">
+<div class="col-span-12 md:col-span-5 pr-md">
+<span class="font-section-sm text-section-sm text-on-surface group-hover:text-secondary transition-colors line-clamp-2">Do SGLT2 inhibitors reduce CV death in patients with HFrEF?</span>
+<!-- Mobile only metadata -->
+<div class="md:hidden mt-2 flex flex-wrap gap-x-lg gap-y-1">
+<span class="font-data-mono text-data-mono text-on-surface-variant">2023-10-24</span>
+<span class="font-data-mono text-data-mono text-on-surface-variant">n=3</span>
+<span class="font-data-mono text-data-mono text-on-surface-variant font-medium text-error">0.81 [0.74, 0.88]</span>
+<div class="mt-2 w-full flex items-center gap-xs text-[11px] font-medium uppercase tracking-wider text-[#B45309] bg-[#FEF3C7] px-2 py-1 rounded inline-flex w-fit">
+<span class="w-1.5 h-1.5 rounded-full bg-[#D97706]"></span>
+                                    Conclusion moved
+                                </div>
+</div>
+</div>
+<div class="hidden md:block col-span-2 font-data-mono text-data-mono text-on-surface-variant text-right">2023-10-24</div>
+<div class="hidden md:block col-span-1 font-data-mono text-data-mono text-on-surface-variant text-right">3</div>
+<div class="hidden md:block col-span-2 font-data-mono text-data-mono text-on-surface text-right font-medium">0.81 <span class="text-on-surface-variant font-normal">[0.74, 0.88]</span></div>
+<div class="hidden md:flex col-span-2 pl-lg items-center">
+<div class="flex items-center gap-xs text-[11px] font-medium uppercase tracking-wider text-[#B45309] bg-[#FEF3C7] px-2 py-1 rounded">
+<span class="w-1.5 h-1.5 rounded-full bg-[#D97706]"></span>
+                                Conclusion moved
+                            </div>
+</div>
+</div>
+<!-- Row 2: Blue / Updated -->
+<div class="grid grid-cols-12 gap-sm px-xl py-lg hairline-b hover:bg-surface-bright transition-colors items-center group cursor-pointer">
+<div class="col-span-12 md:col-span-5 pr-md">
+<span class="font-section-sm text-section-sm text-on-surface group-hover:text-secondary transition-colors line-clamp-2">Efficacy of direct oral anticoagulants in atrial fibrillation patients over 80</span>
+<!-- Mobile only metadata -->
+<div class="md:hidden mt-2 flex flex-wrap gap-x-lg gap-y-1">
+<span class="font-data-mono text-data-mono text-on-surface-variant">2023-10-23</span>
+<span class="font-data-mono text-data-mono text-on-surface-variant">n=12</span>
+<span class="font-data-mono text-data-mono text-on-surface-variant font-medium">0.92 [0.85, 1.01]</span>
+<div class="mt-2 w-full flex items-center gap-xs text-[11px] font-medium uppercase tracking-wider text-[#1D4ED8] bg-[#DBEAFE] px-2 py-1 rounded inline-flex w-fit">
+<span class="w-1.5 h-1.5 rounded-full bg-[#2563EB]"></span>
+                                    Estimate updated
+                                </div>
+</div>
+</div>
+<div class="hidden md:block col-span-2 font-data-mono text-data-mono text-on-surface-variant text-right">2023-10-23</div>
+<div class="hidden md:block col-span-1 font-data-mono text-data-mono text-on-surface-variant text-right">12</div>
+<div class="hidden md:block col-span-2 font-data-mono text-data-mono text-on-surface text-right font-medium">0.92 <span class="text-on-surface-variant font-normal">[0.85, 1.01]</span></div>
+<div class="hidden md:flex col-span-2 pl-lg items-center">
+<div class="flex items-center gap-xs text-[11px] font-medium uppercase tracking-wider text-[#1D4ED8] bg-[#DBEAFE] px-2 py-1 rounded">
+<span class="w-1.5 h-1.5 rounded-full bg-[#2563EB]"></span>
+                                Estimate updated
+                            </div>
+</div>
+</div>
+<!-- Row 3: Neutral / Unchanged -->
+<div class="grid grid-cols-12 gap-sm px-xl py-lg hover:bg-surface-bright transition-colors items-center group cursor-pointer">
+<div class="col-span-12 md:col-span-5 pr-md">
+<span class="font-section-sm text-section-sm text-on-surface group-hover:text-secondary transition-colors line-clamp-2">Corticosteroids vs placebo for acute respiratory distress syndrome</span>
+<!-- Mobile only metadata -->
+<div class="md:hidden mt-2 flex flex-wrap gap-x-lg gap-y-1">
+<span class="font-data-mono text-data-mono text-on-surface-variant">2023-10-20</span>
+<span class="font-data-mono text-data-mono text-on-surface-variant">n=7</span>
+<span class="font-data-mono text-data-mono text-on-surface-variant font-medium">0.88 [0.76, 1.03]</span>
+<div class="mt-2 w-full flex items-center gap-xs text-[11px] font-medium uppercase tracking-wider text-on-surface-variant bg-surface-container-high px-2 py-1 rounded inline-flex w-fit">
+<span class="w-1.5 h-1.5 rounded-full bg-outline"></span>
+                                    Unchanged
+                                </div>
+</div>
+</div>
+<div class="hidden md:block col-span-2 font-data-mono text-data-mono text-on-surface-variant text-right">2023-10-20</div>
+<div class="hidden md:block col-span-1 font-data-mono text-data-mono text-on-surface-variant text-right">7</div>
+<div class="hidden md:block col-span-2 font-data-mono text-data-mono text-on-surface text-right font-medium opacity-80">0.88 <span class="text-on-surface-variant font-normal">[0.76, 1.03]</span></div>
+<div class="hidden md:flex col-span-2 pl-lg items-center">
+<div class="flex items-center gap-xs text-[11px] font-medium uppercase tracking-wider text-on-surface-variant bg-surface-container-high px-2 py-1 rounded">
+<span class="w-1.5 h-1.5 rounded-full bg-outline"></span>
+                                Unchanged
+                            </div>
+</div>
+</div>
+</div>
+</div>
+<!-- Contextual empty state/footer note -->
+<div class="max-w-6xl mx-auto w-full mt-lg text-center opacity-60">
+<p class="font-body-md text-body-md text-on-surface-variant flex items-center justify-center gap-sm">
+<span class="material-symbols-outlined text-[16px]">info</span>
+                     Auto-monitoring active on 3 pinned reviews. Next scan in 4 hours.
+                 </p>
+</div>
+</div>
+</main>
+</body></html>
