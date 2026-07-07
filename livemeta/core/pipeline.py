@@ -9,11 +9,14 @@ from __future__ import annotations
 
 from collections.abc import Callable, Iterator
 
+from collections.abc import Sequence
+
 from .schema import (
     EffectMeasure,
     PipelineEvent,
     PoolResult,
     Question,
+    ReviewDecision,
     ReviewResult,
 )
 from .sources.clinicaltrials import ClinicalTrialsClient
@@ -147,3 +150,54 @@ def run_review_collect(
         if event.stage == "done" and event.data is not None:
             result = ReviewResult.model_validate(event.data)
     return result
+
+
+def repool_with_decisions(
+    result: ReviewResult, decisions: Sequence[ReviewDecision]
+) -> ReviewResult:
+    """Re-pool a review after a human confirms or flags trials.
+
+    A *flag* removes a trial from the pool (it fails the validation gate like any
+    un-extracted trial); a *confirm* records sign-off but leaves poolability to the
+    deterministic gate. The estimate, heterogeneity, and summary are recomputed
+    from scratch — the model never edits numbers, it only re-runs the pool.
+    """
+    by_decision = {d.study_id: d for d in decisions}
+
+    extractions = []
+    for e in result.extractions:
+        ext = e.model_copy(deep=True)
+        decision = by_decision.get(ext.study_id)
+        if decision is not None:
+            if decision.decision == "flagged":
+                ext.flagged = True
+                ext.confirmed = False
+                ext.flag_reason = decision.reason or "Flagged for review by a reviewer."
+            elif decision.decision == "confirmed":
+                ext.confirmed = True
+                ext.flagged = False
+                ext.flag_reason = None
+        extractions.append(ext)
+
+    validations = validate_mod.validate_ratio(extractions)
+    passed_ids = {v.study_id for v in validations if v.passed}
+    points = [e.point for e in extractions if e.study_id in passed_ids and e.point]
+
+    pool = (
+        stats_engine.pool(points, measure=result.question.measure)
+        if len(points) >= 2
+        else None
+    )
+    summary = (
+        summarize(result.question, pool)
+        if pool is not None
+        else "Too few valid trials to pool — abstaining."
+    )
+
+    return ReviewResult(
+        question=result.question,
+        extractions=extractions,
+        validations=validations,
+        pool=pool,
+        summary=summary,
+    )

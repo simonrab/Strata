@@ -4,15 +4,18 @@ import { useReview } from "../lib/review";
 import { PipelineTimeline } from "../components/PipelineTimeline";
 
 export function RunningPipeline() {
-  const { status, events } = useReview();
+  const { status, events, runningId } = useReview();
   const navigate = useNavigate();
 
   useEffect(() => {
     if (status === "done") {
-      const t = setTimeout(() => navigate("/report"), 600);
+      const t = setTimeout(
+        () => navigate(`/reviews/${runningId ?? "glp1-mace"}/evidence`),
+        600
+      );
       return () => clearTimeout(t);
     }
-  }, [status, navigate]);
+  }, [status, runningId, navigate]);
 
   return (
     <div className="mx-auto max-w-3xl px-8 py-12">

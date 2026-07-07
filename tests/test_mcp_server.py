@@ -73,6 +73,23 @@ def test_run_review_saves_snapshot_and_returns_result():
     assert server.get_store().list_versions("glp1-mace") == [1]
 
 
+def test_parse_question_recognizes_the_locked_demo():
+    q = server.parse_question(GLP1_MACE_QUESTION.text)
+    assert q.id == "glp1-mace"
+    assert len(q.trial_ids) == 8
+
+
+def test_record_decision_flags_trial_and_repools():
+    server.run_review("glp1-mace")
+    target = GLP1_CVOT_TRIALS[0]
+
+    result = server.record_decision("glp1-mace", target, "flagged", "unclear arm")
+
+    assert result.pool.k == 7
+    assert target not in {s.study_id for s in result.pool.studies}
+    assert server.get_store().list_versions("glp1-mace") == [1, 2]
+
+
 def test_update_adds_trial_and_reports_diff():
     # Seed a 7-trial baseline via core, then let `update` add the 8th.
     q7 = GLP1_MACE_QUESTION.model_copy(update={"trial_ids": GLP1_CVOT_TRIALS[:7]})

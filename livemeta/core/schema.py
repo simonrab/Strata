@@ -103,7 +103,22 @@ class TrialExtraction(BaseModel):
     point: EffectPoint | None = None
     flagged: bool = False
     flag_reason: str | None = None
+    confirmed: bool = False  # a human reviewer signed off on this extraction
     provenance: list[Provenance] = Field(default_factory=list)
+
+
+class ReviewDecision(BaseModel):
+    """A human reviewer's confirm/flag call on one trial's extraction.
+
+    The load-bearing human-in-the-loop record: a *flag* removes a trial from the
+    pool; a *confirm* records sign-off for the audit trail. Every decision carries
+    who-decided-what-when so the ledger is traceable end to end.
+    """
+
+    study_id: str
+    decision: str  # "confirmed" | "flagged"
+    reason: str | None = None
+    timestamp: str | None = None
 
 
 class StudyResult(BaseModel):
@@ -174,6 +189,20 @@ class TrialCandidate(BaseModel):
     nct_id: str
     title: str
     source: str = "clinicaltrials.gov"
+
+
+class ReviewSummary(BaseModel):
+    """One row on the Reviews Dashboard — the headline of a saved review."""
+
+    question_id: str
+    text: str
+    versions: int
+    k: int = 0
+    estimate: float | None = None
+    ci_low: float | None = None
+    ci_high: float | None = None
+    measure: str = "HR"
+    status: str = "unchanged"  # unchanged | estimate-updated | conclusion-moved
 
 
 class ReviewDiff(BaseModel):

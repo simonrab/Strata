@@ -21,15 +21,17 @@ from mcp.server.fastmcp import FastMCP
 
 from ..core import demo
 from ..core import extract as extract_mod
+from ..core import llm as llm_mod
 from ..core import search as search_mod
 from ..core import validate as validate_mod
 from ..core.diff import diff_reviews
-from ..core.pipeline import run_review_collect
+from ..core.pipeline import repool_with_decisions, run_review_collect
 from ..core.schema import (
     EffectMeasure,
     PICO,
     PoolResult,
     Question,
+    ReviewDecision,
     ReviewDiff,
     ReviewResult,
     TrialCandidate,
@@ -138,6 +140,41 @@ def pool(extractions: list[dict], measure: str = "HR") -> PoolResult:
     passed = {v.study_id for v in validations if v.passed}
     points = [e.point for e in parsed if e.study_id in passed and e.point]
     return stats_engine.pool(points, measure=EffectMeasure(measure))
+
+
+@mcp.tool()
+def parse_question(text: str) -> Question:
+    """Structure a free-text clinical question into PICO + candidate trials.
+
+    Claude reads and structures the question; ClinicalTrials.gov search fills in
+    the candidate trial ids. The locked demo question resolves deterministically
+    without a key, so the memorable demo always works.
+    """
+    return llm_mod.parse_question(text, search_client=get_client())
+
+
+@mcp.tool()
+def record_decision(
+    question_id: str, study_id: str, decision: str, reason: str | None = None
+) -> ReviewResult:
+    """Record a human confirm/flag on one trial and re-pool the review.
+
+    A *flag* removes the trial from the pool; a *confirm* records sign-off. The
+    re-pool is snapshotted as a new version, so the audit trail is real — the
+    model never edits numbers, it only re-runs the deterministic pool.
+    """
+    store = get_store()
+    latest = store.load_latest(question_id)
+    if latest is None:
+        raise ValueError(
+            f"No existing review for question_id {question_id!r}; run `run_review` first."
+        )
+    store.save_decision(
+        question_id, ReviewDecision(study_id=study_id, decision=decision, reason=reason)
+    )
+    repooled = repool_with_decisions(latest, store.load_decisions(question_id))
+    store.save_snapshot(repooled)
+    return repooled
 
 
 @mcp.tool()

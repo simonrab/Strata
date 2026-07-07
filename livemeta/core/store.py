@@ -14,7 +14,7 @@ import os
 import re
 from pathlib import Path
 
-from .schema import ReviewResult
+from .schema import ReviewDecision, ReviewResult
 
 _DEFAULT_DIR = ".livemeta_data"
 _SAFE = re.compile(r"[^A-Za-z0-9_-]+")
@@ -29,21 +29,30 @@ class SnapshotStore:
     def _path(self, question_id: str) -> Path:
         return self._dir / f"{_SAFE.sub('_', question_id)}.json"
 
-    def _read(self, question_id: str) -> list[dict]:
+    def _load_file(self, question_id: str) -> dict:
         path = self._path(question_id)
         if not path.exists():
-            return []
-        return json.loads(path.read_text()).get("snapshots", [])
+            return {"question_id": question_id, "snapshots": [], "decisions": []}
+        data = json.loads(path.read_text())
+        data.setdefault("snapshots", [])
+        data.setdefault("decisions", [])
+        return data
+
+    def _write_file(self, question_id: str, data: dict) -> None:
+        self._path(question_id).write_text(json.dumps(data, indent=2))
+
+    def _read(self, question_id: str) -> list[dict]:
+        return self._load_file(question_id)["snapshots"]
 
     def save_snapshot(self, result: ReviewResult) -> int:
         """Append a snapshot for its question; return the new version number."""
         question_id = result.question.id
-        snapshots = self._read(question_id)
-        version = len(snapshots) + 1
-        snapshots.append({"version": version, "result": result.model_dump(mode="json")})
-        self._path(question_id).write_text(
-            json.dumps({"question_id": question_id, "snapshots": snapshots}, indent=2)
+        data = self._load_file(question_id)
+        version = len(data["snapshots"]) + 1
+        data["snapshots"].append(
+            {"version": version, "result": result.model_dump(mode="json")}
         )
+        self._write_file(question_id, data)
         return version
 
     def load_latest(self, question_id: str) -> ReviewResult | None:
@@ -54,3 +63,27 @@ class SnapshotStore:
 
     def list_versions(self, question_id: str) -> list[int]:
         return [s["version"] for s in self._read(question_id)]
+
+    def list_questions(self) -> list[str]:
+        """All question ids with at least one saved snapshot — feeds the dashboard."""
+        ids: list[str] = []
+        for path in sorted(self._dir.glob("*.json")):
+            data = json.loads(path.read_text())
+            if data.get("snapshots"):
+                ids.append(data.get("question_id", path.stem))
+        return ids
+
+    def save_decision(self, question_id: str, decision: ReviewDecision) -> None:
+        """Record a human confirm/flag; the latest decision per trial wins."""
+        data = self._load_file(question_id)
+        data["decisions"] = [
+            d for d in data["decisions"] if d.get("study_id") != decision.study_id
+        ]
+        data["decisions"].append(decision.model_dump(mode="json"))
+        self._write_file(question_id, data)
+
+    def load_decisions(self, question_id: str) -> list[ReviewDecision]:
+        return [
+            ReviewDecision.model_validate(d)
+            for d in self._load_file(question_id)["decisions"]
+        ]

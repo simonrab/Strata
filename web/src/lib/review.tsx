@@ -16,7 +16,8 @@ interface ReviewState {
   events: PipelineEvent[];
   result: ReviewResult | null;
   question: Question | null;
-  start: () => void;
+  runningId: string | null;
+  start: (question?: Question) => void;
   reset: () => void;
 }
 
@@ -32,6 +33,7 @@ export function ReviewProvider({ children }: { children: ReactNode }) {
   const [events, setEvents] = useState<PipelineEvent[]>([]);
   const [result, setResult] = useState<ReviewResult | null>(null);
   const [question, setQuestion] = useState<Question | null>(null);
+  const [runningId, setRunningId] = useState<string | null>(null);
   const socketRef = useRef<WebSocket | null>(null);
   const questionLoaded = useRef(false);
 
@@ -42,23 +44,24 @@ export function ReviewProvider({ children }: { children: ReactNode }) {
     setResult(null);
   }, []);
 
-  const start = useCallback(() => {
+  const start = useCallback((q?: Question) => {
     setEvents([]);
     setResult(null);
     setStatus("running");
+    setRunningId(q?.id ?? "glp1-mace");
 
     const socket = new WebSocket(wsUrl("/ws/review"));
     socketRef.current = socket;
 
-    socket.onopen = () => socket.send(JSON.stringify({ mode: "demo" }));
+    socket.onopen = () =>
+      socket.send(JSON.stringify(q ? { question: q } : { mode: "demo" }));
     socket.onmessage = (msg) => {
       const event: PipelineEvent = JSON.parse(msg.data);
       setEvents((prev) => [...prev, event]);
-      if (event.stage === "parse" && event.data) {
-        // Nothing extra; question already fetched on the Ask screen.
-      }
       if (event.stage === "done") {
-        setResult(event.data as ReviewResult);
+        const done = event.data as ReviewResult;
+        setResult(done);
+        setRunningId(done.question.id);
         setStatus("done");
       }
     };
@@ -67,8 +70,8 @@ export function ReviewProvider({ children }: { children: ReactNode }) {
 
   // Fetch the demo question once so the Ask screen can show it.
   const value = useMemo<ReviewState>(
-    () => ({ status, events, result, question, start, reset }),
-    [status, events, result, question, start, reset]
+    () => ({ status, events, result, question, runningId, start, reset }),
+    [status, events, result, question, runningId, start, reset]
   );
 
   // Lazy-load the demo question exactly once.

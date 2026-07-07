@@ -49,7 +49,27 @@ export interface TrialExtraction {
   ci_high: number | null;
   flagged: boolean;
   flag_reason: string | null;
+  confirmed: boolean;
   provenance: Provenance[];
+}
+
+export interface ReviewDecision {
+  study_id: string;
+  decision: "confirmed" | "flagged";
+  reason?: string | null;
+  timestamp?: string | null;
+}
+
+export interface ReviewSummary {
+  question_id: string;
+  text: string;
+  versions: number;
+  k: number;
+  estimate: number | null;
+  ci_low: number | null;
+  ci_high: number | null;
+  measure: string;
+  status: string;
 }
 
 export interface PICO {
