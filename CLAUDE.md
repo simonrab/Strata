@@ -1,10 +1,16 @@
 # Living Meta-Analysis Tool: Build Context
 
-## Goal
-Build a tool that answers a clinical question with a live, auditable meta-analysis. Given a question in PICO form and one outcome, it finds the relevant randomised trials, extracts effect data with full provenance, pools it with proper random-effects statistics, and returns a forest plot with heterogeneity measures. When a new trial appears, it re-runs and flags whether the pooled estimate or the conclusion changed.
+## One-line pitch
+A living meta-analysis tool that finds the trials, extracts the evidence with full provenance, and pools it into a current, auditable answer to a clinical question that updates itself as new results land.
 
-## Why
-Meta-analyses go stale the moment they publish, and redoing them is slow and expensive. A living version that keeps rigour and shows its working is a real need for medical affairs, HEOR, and clinical development teams. The differentiator is trust: every number is traceable and the statistics are deterministic.
+## Outcome
+The user asks a clinical question in PICO form for one outcome. The tool returns a single pooled answer: an effect estimate with confidence interval, a forest plot, heterogeneity measures, and a plain-language summary. Every number is traceable to its source trial and snippet. When a new trial reads out, the tool re-runs and flags whether the estimate or the conclusion changed, so the evidence base never goes stale.
+
+## ICP
+Medical affairs, HEOR, and clinical development teams who depend on meta-analyses to make evidence-based decisions. Their pain is concrete. A meta-analysis is out of date the moment it publishes, and refreshing it is slow, manual, and expensive. This tool gives them a current answer that can be traced and checked line by line, which is what makes it usable in a regulated setting rather than only interesting.
+
+## Builder track fit
+The Builder track rewards tools life sciences professionals actually need, built with Claude Code. This is a working tool built as an MCP server so Claude drives the full workflow. It also shows judgment about where to use a model and where not to. Claude reads and structures the evidence. Deterministic statistics do the pooling. That division is the trust story a life sciences tool has to earn.
 
 ## Core design principle
 Divide the labour by what each part is reliable at.
@@ -13,10 +19,17 @@ Divide the labour by what each part is reliable at.
 - Every number is traceable to a source trial and the exact snippet it came from.
 - The tool abstains rather than inventing precision when data is thin or heterogeneity is high.
 
-## Architecture
-Build as an MCP server so Claude can drive the full workflow, plus a thin UI or CLI that renders the forest plot.
+## Engineering practice: TDD and BDD (mandatory)
+All code, backend and frontend, is written test-first. No production module before its failing test.
+- TDD: red, green, refactor. Write a failing test, make it pass, then clean up.
+- BDD: describe behaviour as Given/When/Then scenarios that become executable tests. Cover the pipeline spine and user journeys this way.
+- Backend: `pytest` plus `pytest-bdd` for Gherkin `.feature` scenarios. Frontend: Vitest plus React Testing Library, with BDD scenarios for the ask, run, and report journeys.
+- The deterministic validation gate and the stats engine get the heaviest coverage. They are the trust story.
 
-MCP tools to expose:
+## Architecture
+Build as an MCP server so Claude can drive the workflow, plus a fully functioning web UI platform that runs the whole review end to end: ask a question, watch the pipeline execute, inspect the evidence ledger, verify extractions, review risk of bias and GRADE, and read the report with its forest plot. The UI is a first-class deliverable, not a demo shim. The screens in `stitch_livemeta_precision_evidence_system/` are the reference design to build against.
+
+MCP tools:
 - `search_trials(pico, outcome)`: find candidate trials.
 - `extract_effects(trial_id)`: return structured effect data with provenance.
 - `validate(extractions)`: run deterministic checks, return pass or flag.
@@ -31,28 +44,12 @@ MCP tools to expose:
 ## Pipeline
 1. Parse the question into PICO and one outcome. Claude does this.
 2. Retrieve candidate trials from ClinicalTrials.gov v2 first, supplemented by Europe PMC.
-3. Extract effect data into a fixed schema. Binary outcomes: events and totals per arm. Continuous outcomes: mean, SD, n per arm. Every value carries the source trial ID and the source snippet.
+3. Extract effect data into a fixed schema. Binary outcomes: events and totals per arm. Continuous outcomes: mean, SD, n per arm. Every value carries the source trial ID and source snippet.
 4. Validate deterministically before any pooling.
-5. Pool with a validated library. Compute pooled effect, confidence interval, I-squared, tau-squared.
-6. Output a forest plot, a plain-language summary, heterogeneity warnings, and a leave-one-out sensitivity check.
-7. Living layer: when a new trial lands, re-run and flag whether the estimate or conclusion changed.
-
-## Full systematic review scope (Cochrane Handbook Part 2)
-The meta-analysis is Chapter 10 — one step of a fifteen-chapter review process (https://www.cochrane.org/authors/handbooks-and-manuals/handbook/current/part-2). Pooling numbers from trials that were selected loosely, extracted carelessly, or never appraised for bias produces a confident wrong answer. So the tool is a **living systematic review with meta-analysis at its core**, and the steps that feed the pool are first-class, not preamble. Each step is split by the core principle — Claude reads and judges, code computes, a human confirms the load-bearing calls.
-
-Pipeline (chapter → step → who):
-- Ch2 — scope the question into PICO + one outcome — Claude.
-- Ch3 — set explicit eligibility criteria — Claude, human confirms.
-- Ch4 — search and select trials; keep PRISMA-style counts and per-trial exclusion reasons — code retrieves, Claude screens.
-- Ch5 — collect arm-level data with provenance — code parses, Claude maps ambiguous fields.
-- Ch6 — compute per-trial effect estimates — code.
-- **Ch7-8 — assess risk of bias (RoB 2) across the five domains, per trial** — Claude does a first-pass reading, human confirms. This is the credibility gate the pool depends on, and it feeds both sensitivity analysis (restrict to low risk of bias) and GRADE. Do not skip it.
-- Ch9 — prepare for synthesis: group only comparable trials, flag unit-of-analysis problems — code + Claude.
-- Ch10 — the meta-analysis (see Statistics and Full meta-analysis scope).
-- **Ch13-14 — rate certainty of evidence (GRADE) and check reporting bias** — much of it is derivable from what we already compute: inconsistency from I-squared, imprecision from CI width and event counts, plus risk of bias from Ch7-8; Claude judges indirectness. Output a Summary-of-Findings line with a certainty rating (high/moderate/low/very low).
-- Ch15 — interpret and conclude in plain language with caveats — Claude drafts, human signs off.
-
-Risk of bias (Ch7-8) and GRADE certainty (Ch14) are the two additions that turn "a pooled number with a plot" into "a defensible answer." Treat them as core for credibility even though they sit outside the arithmetic. Network meta-analysis (Ch11) and non-standard synthesis (Ch12) are out of scope.
+5. Assess risk of bias per trial with RoB 2, and rate certainty of evidence with GRADE (see Risk of bias and certainty below). Claude does a first-pass reading, a human confirms.
+6. Pool with a validated library. Compute pooled effect, confidence interval, I-squared, tau-squared.
+7. Output a forest plot, a plain-language summary, heterogeneity warnings, and a leave-one-out sensitivity check.
+8. Living layer: when a new trial lands, re-run and flag whether the estimate or conclusion changed.
 
 ## Extraction strategy
 Safety-first tiering. Fail safely on the messy tail rather than pool bad numbers.
@@ -61,41 +58,63 @@ Safety-first tiering. Fail safely on the messy tail rather than pool bad numbers
 - Require provenance. Each value carries its source trial ID and the exact sentence or table cell. If a value is not clearly present, return null and flag the trial. No silent inference or back-calculation.
 - Low-confidence or conflicting extractions surface for quick human review before entering the pool. This is the audit trail, not a workaround.
 
-## Statistics
-- Use a validated library, not hand-rolled math. Python `statsmodels.stats.meta_analysis` (`combine_effects`) for inverse-variance random-effects pooling.
-- Report pooled effect, 95% confidence interval, I-squared, tau-squared, Cochran's Q with p-value, and a **prediction interval** (the range of true effects across settings — distinct from the CI of the mean, and routinely omitted by tools that stop at the forest plot).
-- Choose the pooling method to fit the data, and state which was used and why: Mantel-Haenszel for sparse dichotomous data, Peto for rare events, generic inverse-variance otherwise. Handle zero cells explicitly (continuity correction or a method that avoids it), logged as an assumption.
-- Choose the effect measure to fit the outcome: risk ratio / odds ratio / risk difference (dichotomous), mean difference / standardized mean difference (continuous).
-- Random-effects estimator is a choice, not a default: DerSimonian-Laird or REML for tau-squared, and apply the Hartung-Knapp-Sidik-Jonkman adjustment when studies are few (DL under-covers with a handful of trials).
-- Sensitivity suite, not a single number: leave-one-out, fixed-effect vs random-effect comparison, and robustness to inclusion/exclusion decisions.
-- Convert to absolute effects (apply the pooled relative effect to a baseline risk) so the plain-language summary is interpretable, not just a ratio.
-- Flag unit-of-analysis problems before pooling: multi-arm trials sharing a control arm (double-counting), cluster trials, repeated measurements.
-- Standard-form conversions such as SE to SD or CI to SD use Cochrane Handbook formulas, run in code, and each conversion is logged as an assumption.
+## Statistics: Cochrane-aligned method
+Follow the Cochrane Handbook for Systematic Reviews of Interventions, v6.5, Chapter 10 (updated November 2024). Use a validated meta-analysis library, never hand-rolled pooling. If a required method is not available in the library, flag the case rather than substitute a biased default.
 
-## Full meta-analysis scope (Cochrane Handbook Chapter 10)
-The forest plot is one figure; the deliverable is a meta-analysis, and Chapter 10 (https://www.cochrane.org/authors/handbooks-and-manuals/handbook/current/chapter-10) defines what that means. Scope the build in tiers.
+Homogeneity gate before any pooling.
+- Only pool studies judged similar enough in population, intervention, comparator, and outcome to give a clinically meaningful answer. This is a mandatory Cochrane expectation, not optional. Surface clinical diversity and require confirmation rather than silently combining unlike trials.
 
-Core (must be present for it to count as a real meta-analysis, and all achievable for the constrained case of dichotomous outcomes from RCTs):
-- Appropriate effect measure and pooling method, stated and justified (see Statistics above).
-- Full heterogeneity panel: Q + p, I-squared, tau-squared, and a prediction interval.
-- Sensitivity analyses: leave-one-out and fixed-vs-random comparison.
-- Absolute-effect translation from a stated baseline risk.
-- Unit-of-analysis checks and the exclusion/assumption audit trail.
-- Honest abstention when heterogeneity is high, studies are too few, or data is thin.
+Core method.
+- Two-stage inverse-variance approach. Compute a per-study effect and standard error, then a weighted average.
+- Pool ratio measures (risk ratio, odds ratio) on the log scale.
 
-Extensions (clearly scoped, add if time allows):
-- Continuous outcomes (MD/SMD), and mixed dichotomous+continuous via re-expression.
-- Subgroup analysis and meta-regression to investigate heterogeneity.
-- Small-study-effect / publication-bias checks (funnel plot, Egger) — strictly, Chapter 13.
+Effect measure selection.
+- Binary outcomes: prefer risk ratio or odds ratio. Avoid risk difference, which is less consistent.
+- Continuous outcomes: mean difference when studies share a scale, standardized mean difference when scales differ. Assumes approximate normality, so check for skew. Do not mix log-transformed and untransformed data.
 
-Out of scope for the hackathon (detect and route to manual review, be honest about it):
-- Time-to-event / hazard-ratio pooling that requires reconstructing data from Kaplan-Meier curves.
-- Ordinal scales and count/rate (Poisson) outcomes.
-- Bayesian meta-analysis.
-- Individual-participant-data methods.
+Model and variance estimator.
+- Default to random-effects.
+- Use REML for the between-study variance (Tau-squared), the Cochrane default since 2024. DerSimonian-Laird is an available alternative.
+- Never choose fixed versus random effects based on a heterogeneity test.
+
+Confidence interval.
+- Use the Hartung-Knapp-Sidik-Jonkman (HKSJ) interval with a t-distribution when Tau-squared is above zero and there are more than two studies.
+- Use the Wald-type interval otherwise. Flag that HKSJ can be too wide with only two or three studies and Wald can be too narrow.
+
+Heterogeneity reporting.
+- Report the Chi-squared test read at P below 0.10 (it is underpowered), I-squared with interpretation bands, and Tau-squared.
+- Interpretation bands for I-squared: 0 to 40 percent might not be important, 30 to 60 moderate, 50 to 90 substantial, 75 to 100 considerable. Avoid rigid thresholds, especially with few studies.
+- Add a prediction interval when there are five or more studies and no clear funnel plot asymmetry.
+
+Rare events.
+- Inverse-variance and DerSimonian-Laird are biased when events are rare. Below roughly 1 percent event rates, or when many study arms have zero events, switch to Peto or Mantel-Haenszel without zero-cell correction, or flag rather than pool.
+- Exclude studies with no events in both arms. Do not apply fixed 0.5 zero-cell corrections silently, as they bias estimates.
+
+Sensitivity analysis.
+- Run leave-one-out.
+- With only two or three studies, compare Wald and HKSJ intervals and report the difference rather than hiding it.
+
+Data conversions.
+- Standard-form conversions such as SE to SD or CI to SD use Cochrane Handbook formulas, run in code, with each conversion logged as an assumption.
+
+Out of scope for the hackathon (statistical).
+- Subgroup analysis and meta-regression. Meta-regression needs about ten studies to be meaningful.
+- Network meta-analysis and time-to-event reconstruction.
+
+## Risk of bias and certainty (RoB 2 and GRADE)
+These are core credibility steps, not preamble. Pooling numbers from trials that were never appraised produces a confident wrong answer. Each step is split by the core principle: Claude reads and judges, code computes what it can, a human confirms the load-bearing calls.
+
+Risk of bias (RoB 2), per trial.
+- Assess the five RoB 2 domains: randomization, deviations from intended interventions, missing outcome data, measurement of the outcome, and selection of the reported result.
+- Claude does a first-pass judgment per domain with a source quote for each; a human confirms. Every judgment carries its provenance, same as an extracted number.
+- This gate feeds two things downstream: a sensitivity analysis restricted to low-risk-of-bias trials, and the risk-of-bias input to GRADE.
+
+Certainty of evidence (GRADE).
+- Rate certainty per outcome as high, moderate, low, or very low, and output a Summary-of-Findings line.
+- Much of it is derivable from what we already compute: inconsistency from I-squared, imprecision from confidence-interval width and event counts, plus risk of bias from RoB 2. Claude judges indirectness and publication bias. Record the rationale for any downgrade.
 
 ## Deterministic validation gate
-Plain code, not the model, runs these before pooling:
+Plain code, not the model, runs these before pooling.
 - Events cannot exceed arm totals.
 - Arm sizes must sum correctly.
 - Percentages must match counts.
@@ -112,25 +131,15 @@ Pool only numbers that can be traced to a source and pass validation. Report wha
 ## Tech stack
 - Python.
 - MCP Python SDK for the server.
-- `statsmodels` for meta-analysis, `scipy` and `numpy` for support.
+- Meta-analysis library: check `pymare` first for REML support, with R `metafor` via `rpy2` as the fallback if REML or HKSJ are missing. `statsmodels.stats.meta_analysis` covers DerSimonian-Laird. Do not hand-roll pooling. `scipy` and `numpy` for support.
 - `matplotlib` for the forest plot.
-- `requests` or `httpx` for the ClinicalTrials.gov and Europe PMC APIs.
-- Thin CLI or minimal web UI for the demo.
-
-## Suggested build order
-1. ClinicalTrials.gov v2 client returning structured arm-level results for a fixed query.
-2. Extraction schema and `extract_effects` for structured results only.
-3. Validation gate.
-4. `pool` with statsmodels, returning estimate, CI, I-squared, tau-squared.
-5. Forest plot rendering.
-6. Full-text extraction path for trials missing structured data.
-7. Living layer: `update` with a diff against the previous run.
-8. Wrap as MCP tools and wire the CLI or UI.
+- `httpx` or `requests` for the ClinicalTrials.gov and Europe PMC APIs.
+- A fully functioning web UI platform for the front end, built against the reference designs in `stitch_livemeta_precision_evidence_system/`.
 
 ## Demo plan
-- Pick a clinical question where the answer is already well established, so judges can sanity-check the output against known truth.
+- Pick a clinical question where the answer is already well established, so judges can sanity-check the output against known truth. [DECISION NEEDED: lock the exact question.]
 - Scope to one question, one outcome type, five to ten trials from structured results.
-- The memorable moment: inject an eleventh trial live and watch the pooled estimate and the conclusion update.
+- Memorable moment: inject an additional trial live and watch the pooled estimate and conclusion update.
 
 ## Main risks and mitigations
 - Extraction errors: prefer structured results over free text, require provenance, validate before pooling.
