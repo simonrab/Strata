@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { getReview } from "../lib/api";
+import { Icon } from "../components/Icon";
 import type { GradeRating, ReviewResult } from "../lib/types";
 
 const CERTAINTY_DOTS: Record<GradeRating, number> = {
@@ -18,11 +19,11 @@ function CertaintyDots({ rating }: { rating: GradeRating }) {
         {Array.from({ length: 4 }).map((_, i) => (
           <span
             key={i}
-            className={`h-3 w-3 rounded-full ${i < filled ? "bg-secondary" : "bg-surface-container-highest"}`}
+            className={`h-3 w-3 rounded-full ${i < filled ? "bg-accent" : "bg-surface-container-highest"}`}
           />
         ))}
       </div>
-      <span className="text-[11px] font-semibold uppercase tracking-wider text-ink-light">
+      <span className="text-label-caps uppercase text-ink-light">
         {rating.replace("_", " ")}
       </span>
     </div>
@@ -38,10 +39,10 @@ const DOMAIN_LABEL: Record<string, string> = {
 };
 
 function seriousStyle(serious: string): { box: string; label: string } {
-  if (serious === "serious") return { box: "bg-[#f59e0b]", label: "Serious (−1)" };
+  if (serious === "serious") return { box: "bg-risk-some", label: "Serious (−1)" };
   if (serious === "very_serious")
     return { box: "bg-error", label: "Very serious (−2)" };
-  return { box: "bg-[#10b981]", label: "Not serious" };
+  return { box: "bg-risk-low", label: "Not serious" };
 }
 
 export function GradeDetail() {
@@ -81,7 +82,7 @@ export function GradeDetail() {
   return (
     <div className="mx-auto max-w-6xl space-y-8 px-8 py-10">
       <div>
-        <h1 className="font-sans text-[32px] font-semibold tracking-tight text-ink-light">
+        <h1 className="font-sans text-display-lg text-ink-light">
           Summary of Findings
         </h1>
         <p className="mt-1 font-serif text-[16px] text-ink-muted-light">
@@ -90,10 +91,10 @@ export function GradeDetail() {
       </div>
 
       {/* Summary of Findings table */}
-      <section className="overflow-x-auto rounded-md border border-hairline-light bg-card-light">
+      <section className="overflow-x-auto rounded-md hairline bg-card-light">
         <table className="w-full min-w-[720px] border-collapse text-left">
-          <thead className="border-b border-hairline-light bg-surface-container-low">
-            <tr className="text-[11px] font-semibold uppercase tracking-wider text-ink-muted-light">
+          <thead className="hairline-b bg-surface-container-low">
+            <tr className="text-label-caps uppercase text-ink-muted-light">
               <th className="p-4">Outcome</th>
               <th className="p-4">Studies</th>
               <th className="p-4 text-right">Relative effect (95% CI)</th>
@@ -103,7 +104,7 @@ export function GradeDetail() {
           <tbody>
             <tr>
               <td className="p-4">
-                <span className="block text-[15px] font-medium text-ink-light">
+                <span className="block text-[14px] font-medium text-ink-light">
                   {grade.outcome}
                 </span>
               </td>
@@ -133,7 +134,8 @@ export function GradeDetail() {
 
       {/* Certainty detail: 5-domain grid */}
       <div>
-        <h2 className="mb-4 text-[13px] font-medium text-ink-light">
+        <h2 className="mb-4 flex items-center gap-2 text-[13px] font-medium text-ink-light">
+          <Icon name="analytics" size={18} className="text-accent" />
           Certainty detail — five GRADE domains
         </h2>
         <div className="grid grid-cols-1 gap-3 md:grid-cols-3 lg:grid-cols-5">
@@ -144,20 +146,23 @@ export function GradeDetail() {
               <div
                 key={d.name}
                 className={`relative flex h-full flex-col overflow-hidden rounded-sm border p-4 ${
-                  downgraded ? "border-secondary bg-surface-container-low" : "border-hairline-light bg-card-light"
+                  downgraded ? "border-accent bg-surface-container-low" : "border-hairline-light bg-card-light"
                 }`}
               >
                 {downgraded && (
-                  <span className="absolute right-0 top-0 bg-secondary px-1.5 py-0.5 font-mono text-[9px] uppercase text-on-primary">
+                  <span className="absolute right-0 top-0 bg-accent px-1.5 py-0.5 font-mono text-[10px] uppercase text-on-primary">
                     Downgraded
                   </span>
                 )}
-                <p className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-outline">
+                <p className="mb-3 text-label-caps uppercase text-outline">
                   {DOMAIN_LABEL[d.name] ?? d.name}
                   {d.by_claude && (
-                    <span className="ml-1 text-[9px] text-ink-muted-light" title="Judged by Claude">
-                      ✦
-                    </span>
+                    <Icon
+                      name="auto_awesome"
+                      size={12}
+                      className="ml-1 align-middle text-accent"
+                      label="Judged by Claude"
+                    />
                   )}
                 </p>
                 <div className="mb-3 flex items-center gap-2">
@@ -174,10 +179,10 @@ export function GradeDetail() {
       </div>
 
       {grade.footnotes.length > 0 && (
-        <div className="max-w-4xl border-t border-hairline-light pt-4">
+        <div className="max-w-4xl hairline-t pt-4">
           {grade.footnotes.map((f, i) => (
             <p key={i} className="mb-1 text-[12px] leading-relaxed text-ink-muted-light">
-              <sup className="pr-1 text-secondary">{String.fromCharCode(97 + i)}</sup>
+              <sup className="pr-1 text-accent">{String.fromCharCode(97 + i)}</sup>
               {f}
             </p>
           ))}
@@ -186,7 +191,7 @@ export function GradeDetail() {
 
       <Link
         to={`/reviews/${id}/report`}
-        className="inline-block text-[11px] font-semibold uppercase tracking-wider text-ink-muted-light hover:text-secondary"
+        className="inline-block text-label-caps uppercase text-ink-muted-light hover:text-accent"
       >
         View report →
       </Link>

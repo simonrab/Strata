@@ -21,18 +21,18 @@ export function Report() {
   }
 
   return (
-    <div className="mx-auto max-w-4xl px-8 py-12">
+    <div className="mx-auto max-w-6xl px-8 py-12">
       <ReportView result={result} />
       <div className="mt-8 flex gap-3">
         <Link
           to={`/reviews/${result.question.id}/evidence`}
-          className="rounded-sm border border-hairline-light px-4 py-2 text-[13px] text-ink-light hover:bg-surface-container-high"
+          className="rounded-sm hairline px-4 py-2 text-[13px] text-ink-light hover:bg-surface-container-high"
         >
           Evidence ledger
         </Link>
         <Link
           to="/ask"
-          className="rounded-sm border border-hairline-light px-4 py-2 text-[13px] text-ink-light hover:bg-surface-container-high"
+          className="rounded-sm hairline px-4 py-2 text-[13px] text-ink-light hover:bg-surface-container-high"
         >
           New review
         </Link>

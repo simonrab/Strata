@@ -24,6 +24,13 @@ interface ReviewState {
 const ReviewContext = createContext<ReviewState | null>(null);
 
 function wsUrl(path: string): string {
+  // In production the backend is on another origin (Railway); derive the ws(s)
+  // URL from VITE_API_URL. Unset in dev, so we fall back to the same-origin host
+  // and the Vite proxy forwards /ws to the local backend.
+  const base = import.meta.env.VITE_API_URL as string | undefined;
+  if (base) {
+    return `${base.replace(/^http/, "ws").replace(/\/$/, "")}${path}`;
+  }
   const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
   return `${proto}//${window.location.host}${path}`;
 }

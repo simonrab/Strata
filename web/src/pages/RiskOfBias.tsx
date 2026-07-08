@@ -7,14 +7,14 @@ const JUDGMENT: Record<
   RobJudgment,
   { label: string; symbol: string; box: string; text: string }
 > = {
-  low: { label: "Low risk", symbol: "+", box: "bg-[#ecfdf5]", text: "text-[#047857]" },
+  low: { label: "Low risk", symbol: "+", box: "bg-risk-low-container", text: "text-risk-low" },
   some_concerns: {
     label: "Some concerns",
     symbol: "?",
-    box: "bg-[#fffbeb]",
-    text: "text-[#b45309]",
+    box: "bg-risk-some-container",
+    text: "text-risk-some",
   },
-  high: { label: "High risk", symbol: "−", box: "bg-error", text: "text-white" },
+  high: { label: "High risk", symbol: "−", box: "bg-risk-high", text: "text-white" },
   pending: {
     label: "Not assessed",
     symbol: "·",
@@ -85,10 +85,10 @@ export function RiskOfBias() {
     <div className="mx-auto max-w-6xl space-y-6 px-8 py-10">
       <div className="flex flex-col justify-between gap-4 md:flex-row md:items-start">
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-outline">
+          <p className="text-label-caps uppercase text-outline">
             Domain assessment
           </p>
-          <h1 className="mt-1 font-sans text-[32px] font-semibold tracking-tight text-ink-light">
+          <h1 className="mt-1 font-sans text-display-lg text-ink-light">
             Risk of Bias (RoB 2)
           </h1>
           <p className="mt-1 flex items-center gap-2 text-[14px] text-ink-muted-light">
@@ -96,8 +96,8 @@ export function RiskOfBias() {
           </p>
         </div>
         {active && (
-          <div className="rounded-sm border border-hairline-light bg-card-light px-4 py-2">
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-outline">
+          <div className="rounded-sm hairline bg-card-light px-4 py-2">
+            <p className="text-label-caps uppercase text-outline">
               Overall judgment
             </p>
             <div className="mt-1">
@@ -115,7 +115,7 @@ export function RiskOfBias() {
               onClick={() => setSelected(i)}
               className={`rounded-sm border px-3 py-1.5 text-[12px] font-medium transition-colors ${
                 i === selected
-                  ? "border-secondary bg-surface-container-high text-secondary"
+                  ? "border-accent bg-surface-container-high text-accent"
                   : "border-hairline-light text-ink-muted-light hover:bg-surface-container-low"
               }`}
             >
@@ -126,7 +126,7 @@ export function RiskOfBias() {
       )}
 
       {pending && (
-        <p className="rounded-sm border border-hairline-light bg-surface-container-low px-4 py-3 font-mono text-[12px] text-ink-muted-light">
+        <p className="rounded-sm hairline bg-surface-container-low px-4 py-3 font-mono text-[12px] text-ink-muted-light">
           Not yet assessed — risk-of-bias judgments require the model
           (ANTHROPIC_API_KEY not configured). We abstain rather than fabricate a
           judgment.
@@ -134,8 +134,8 @@ export function RiskOfBias() {
       )}
 
       {active && (
-        <section className="overflow-x-auto rounded-md border border-hairline-light bg-card-light">
-          <div className="grid min-w-[820px] grid-cols-12 gap-3 border-b border-hairline-light bg-surface-container-low p-3 text-[11px] font-semibold uppercase tracking-wider text-ink-muted-light">
+        <section className="overflow-x-auto rounded-md hairline bg-card-light">
+          <div className="grid min-w-[820px] grid-cols-12 gap-3 hairline-b bg-surface-container-low p-3 text-label-caps uppercase text-ink-muted-light">
             <div className="col-span-2">Domain</div>
             <div className="col-span-2">Judgment</div>
             <div className="col-span-4">Rationale</div>
@@ -145,7 +145,7 @@ export function RiskOfBias() {
           {active.domains.map((d) => (
             <div
               key={d.key}
-              className="grid min-w-[820px] grid-cols-12 items-start gap-3 border-b border-hairline-light p-3 last:border-0 hover:bg-surface-container-low"
+              className="grid min-w-[820px] grid-cols-12 items-start gap-3 hairline-b p-3 last:border-0 hover:bg-surface-container-low"
             >
               <div className="col-span-2">
                 <p className="text-[14px] text-ink-light">
@@ -164,14 +164,14 @@ export function RiskOfBias() {
               </div>
               <div className="col-span-1 flex justify-end">
                 {d.confirmed ? (
-                  <span className="inline-flex items-center rounded-full border border-[#bbf7d0] bg-[#dcfce7] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-[#15803d]">
+                  <span className="inline-flex items-center rounded-full bg-risk-low-container px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-risk-low">
                     Verified
                   </span>
                 ) : (
                   <button
                     onClick={() => verify(d.key)}
                     disabled={pending || saving === d.key}
-                    className="rounded-sm border border-hairline-light px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-ink-light hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-40"
+                    className="rounded-sm hairline px-3 py-1 text-label-caps uppercase text-ink-light hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     {saving === d.key ? "…" : "Verify"}
                   </button>
@@ -184,7 +184,7 @@ export function RiskOfBias() {
 
       <Link
         to={`/reviews/${id}/grade`}
-        className="inline-block text-[11px] font-semibold uppercase tracking-wider text-ink-muted-light hover:text-secondary"
+        className="inline-block text-label-caps uppercase text-ink-muted-light hover:text-accent"
       >
         GRADE certainty →
       </Link>

@@ -20,6 +20,9 @@ export default {
         "ink-muted": { light: "#434747", dark: "#b4b2a9" },
         // Accent — interaction cues only
         accent: "#2563eb",
+        "accent-container": "#eff6ff",
+        "accent-border": "#bfdbfe",
+        "on-accent-container": "#1e3a8a",
         // Material tokens (from DESIGN.md front-matter)
         surface: "#f9f9f9",
         "surface-container-lowest": "#ffffff",
@@ -38,6 +41,9 @@ export default {
         "risk-low": "#15803d",
         "risk-some": "#b45309",
         "risk-high": "#ba1a1a",
+        "risk-low-container": "#dcfce7",
+        "risk-some-container": "#fef3c7",
+        "risk-high-container": "#fee2e2",
         error: "#ba1a1a",
       },
       fontFamily: {
@@ -46,6 +52,7 @@ export default {
         serif: ["'Source Serif 4'", "Georgia", "serif"],
       },
       fontSize: {
+        "display-xl": ["40px", { lineHeight: "1.1", letterSpacing: "-0.02em", fontWeight: "500" }],
         "display-lg": ["32px", { lineHeight: "1.2", letterSpacing: "-0.02em", fontWeight: "600" }],
         "headline-md": ["20px", { lineHeight: "28px", fontWeight: "500" }],
         "section-sm": ["16px", { lineHeight: "24px", fontWeight: "500" }],

@@ -22,8 +22,8 @@ describe("SnapshotView", () => {
       </MemoryRouter>
     );
     expect(await screen.findByText(/Read-only/i)).toBeInTheDocument();
-    // ReportView renders the pooled answer for that snapshot.
-    expect(screen.getByText(/Pooled answer/i)).toBeInTheDocument();
+    // ReportView renders the pooled result for that snapshot.
+    expect(screen.getByText(/Pooled estimate/i)).toBeInTheDocument();
     expect(getVersion).toHaveBeenCalledWith("glp1-mace", 1);
   });
 });

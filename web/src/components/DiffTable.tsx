@@ -1,3 +1,4 @@
+import { Icon } from "./Icon";
 import type { ReviewDiff, ReviewResult } from "../lib/types";
 
 function fmt(n: number | null | undefined): string {
@@ -60,9 +61,12 @@ export function DiffTable({
     : "No statistically significant effect.";
 
   return (
-    <section className="overflow-hidden rounded-md border border-hairline-light bg-card-light">
-      <div className="flex items-center justify-between border-b border-hairline-light bg-surface-container-low p-3">
-        <h3 className="text-[13px] font-medium text-ink-light">Parameter Shifts</h3>
+    <section className="overflow-hidden rounded-md hairline bg-card-light">
+      <div className="flex items-center justify-between hairline-b bg-surface-container-low p-3">
+        <div className="flex items-center gap-2">
+          <Icon name="compare_arrows" size={18} className="text-ink-muted-light" />
+          <h3 className="text-[13px] font-medium text-ink-light">Parameter Shifts</h3>
+        </div>
         <span className="font-mono text-[11px] text-ink-muted-light">
           v{diff.previous_version} → v{diff.current_version}
         </span>
@@ -70,22 +74,22 @@ export function DiffTable({
       <div className="overflow-x-auto">
         <table className="w-full min-w-[420px] border-collapse text-left">
           <thead>
-            <tr className="text-[11px] font-semibold uppercase tracking-wider text-ink-muted-light">
+            <tr className="text-label-caps uppercase text-ink-muted-light">
               <th className="p-3">Metric</th>
               <th className="p-3 text-right">v{diff.previous_version}</th>
               <th className="w-8 p-3" />
-              <th className="p-3 text-right text-secondary">v{diff.current_version}</th>
+              <th className="p-3 text-right text-accent">v{diff.current_version}</th>
             </tr>
           </thead>
           <tbody className="font-mono text-[13px]">
             {rows.map((r) => (
-              <tr key={r.label} className="border-t border-hairline-light">
+              <tr key={r.label} className="hairline-t">
                 <td className="p-3 font-sans text-ink-light">{r.label}</td>
                 <td className="p-3 text-right text-ink-muted-light">{r.prev}</td>
                 <td className="p-3 text-center text-ink-muted-light">→</td>
                 <td
                   className={`p-3 text-right ${
-                    r.changed ? "font-medium text-secondary" : "text-ink-light"
+                    r.changed ? "font-medium text-accent" : "text-ink-light"
                   }`}
                 >
                   {r.curr}
@@ -95,15 +99,18 @@ export function DiffTable({
           </tbody>
         </table>
       </div>
-      <div className="flex flex-col gap-1 border-t border-hairline-light bg-surface-container-low p-4">
-        <span className="text-[11px] font-semibold uppercase tracking-wider text-ink-muted-light">
+      <div className="flex flex-col gap-1 hairline-t bg-surface-container-low p-4">
+        <span className="text-label-caps uppercase text-ink-muted-light">
           Synthesis verdict
         </span>
-        <p className="flex items-center gap-2 font-serif text-[18px] text-ink-light">
-          <span className={diff.conclusion_changed ? "text-risk-some" : "text-secondary"}>
-            {diff.conclusion_changed ? "⚠" : "✓"}
-          </span>
-          {verdict}
+        <p className="flex items-center gap-2 font-serif text-clinical-conclusion text-ink-light">
+          <Icon
+            name={diff.conclusion_changed ? "warning" : "check_circle"}
+            size={20}
+            fill
+            className={diff.conclusion_changed ? "text-risk-some" : "text-accent"}
+          />
+          <span>{verdict}</span>
         </p>
       </div>
     </section>

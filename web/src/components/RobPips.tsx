@@ -4,10 +4,10 @@ import type { RobAssessment, RobJudgment } from "../lib/types";
 // pips is coloured by its domain judgment; otherwise the bar shows the grey
 // "pending / not assessed" placeholder.
 const PIP_COLOR: Record<RobJudgment, string> = {
-  low: "bg-[#15803d]",
-  some_concerns: "bg-[#b45309]",
+  low: "bg-risk-low",
+  some_concerns: "bg-risk-some",
   high: "bg-error",
-  pending: "bg-[#d1d5db]",
+  pending: "bg-outline-variant",
 };
 
 const OVERALL_LABEL: Record<RobJudgment, string> = {
@@ -35,7 +35,7 @@ export function RobPips({
         {OVERALL_LABEL[overall]}
       </span>
       <div
-        className={`flex gap-[2px] rounded-sm border border-hairline-light bg-white p-[2px] ${
+        className={`flex gap-[2px] rounded-sm hairline bg-white p-[2px] ${
           overall === "pending" ? "opacity-50" : ""
         }`}
         aria-label={`risk of bias ${OVERALL_LABEL[overall].toLowerCase()}`}

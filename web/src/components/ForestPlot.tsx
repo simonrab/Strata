@@ -65,31 +65,31 @@ export function ForestPlot({
         const y = top + i * rowH + rowH / 2;
         const side = Math.max(4, Math.min(14, r.weight)); // square sized by weight
         const isNew = highlighted.has(r.study_id);
-        const mark = isNew ? "fill-[#2563eb]" : "fill-ink-light";
+        const mark = isNew ? "fill-accent" : "fill-ink-light";
         return (
           <g key={r.study_id}>
             <text
               x={16}
               y={y + 3}
               fontSize="11"
-              className={isNew ? "fill-[#2563eb]" : "fill-ink-light"}
+              className={isNew ? "fill-accent" : "fill-ink-light"}
               fontWeight={isNew ? "600" : "400"}
             >
               {r.study_id}
             </text>
             {isNew && (
               <g>
-                <rect x={112} y={y - 8} width={26} height={12} rx={2} className="fill-[#2563eb]" />
+                <rect x={112} y={y - 8} width={26} height={12} rx={2} className="fill-accent" />
                 <text x={125} y={y + 1} fontSize="8" textAnchor="middle" fontWeight="700" className="fill-white">
                   New
                 </text>
               </g>
             )}
             <line x1={x(r.ci_low)} y1={y} x2={x(r.ci_high)} y2={y}
-              stroke="currentColor" className={isNew ? "text-[#2563eb]" : "text-ink-light"} strokeWidth={isNew ? "1.5" : "1"} />
+              stroke="currentColor" className={isNew ? "text-accent" : "text-ink-light"} strokeWidth={isNew ? "1.5" : "1"} />
             <rect x={x(r.effect) - side / 2} y={y - side / 2} width={side} height={side}
               className={mark} />
-            <text x={plotRight + 16} y={y + 3} fontSize="11" className={isNew ? "fill-[#2563eb]" : "fill-ink-light"}>
+            <text x={plotRight + 16} y={y + 3} fontSize="11" className={isNew ? "fill-accent" : "fill-ink-light"}>
               {r.effect.toFixed(2)} [{r.ci_low.toFixed(2)}, {r.ci_high.toFixed(2)}]
             </text>
           </g>
@@ -105,7 +105,7 @@ export function ForestPlot({
         return (
           <g>
             <polygon points={`${l},${y} ${c},${y - 8} ${rgt},${y} ${c},${y + 8}`}
-              className="fill-[#2563eb]" />
+              className="fill-accent" />
             <text x={16} y={y + 3} fontSize="11" fontWeight="700" className="fill-ink-light">
               Pooled (RE)
             </text>

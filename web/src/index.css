@@ -20,7 +20,56 @@ body {
 }
 
 .material-symbols-outlined {
+  font-family: "Material Symbols Outlined";
+  font-weight: normal;
+  font-style: normal;
   font-variation-settings: "FILL" 0, "wght" 300, "GRAD" 0, "opsz" 20;
   font-size: 20px;
   line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-feature-settings: "liga";
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Flat & Hairline: every structural border is 0.5px (DESIGN.md §Elevation).
+   Mirrors the .hairline* helpers the stitch mockups define. */
+@layer utilities {
+  .hairline {
+    border-width: 0.5px;
+    border-color: #e5e5e5;
+  }
+  .hairline-t {
+    border-top-width: 0.5px;
+    border-top-color: #e5e5e5;
+  }
+  .hairline-b {
+    border-bottom-width: 0.5px;
+    border-bottom-color: #e5e5e5;
+  }
+  .hairline-l {
+    border-left-width: 0.5px;
+    border-left-color: #e5e5e5;
+  }
+  .hairline-r {
+    border-right-width: 0.5px;
+    border-right-color: #e5e5e5;
+  }
+}
+
+/* Focus States: a 2px accent ring with a 2px offset (DESIGN.md §Focus). */
+@layer base {
+  a:focus-visible,
+  button:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible,
+  [tabindex]:focus-visible {
+    outline: 2px solid #2563eb;
+    outline-offset: 2px;
+  }
 }

@@ -40,10 +40,10 @@ export function Updates() {
   return (
     <div className="mx-auto max-w-6xl space-y-6 px-8 py-10">
       <div>
-        <p className="text-[11px] font-semibold uppercase tracking-wider text-outline">
+        <p className="text-label-caps uppercase text-outline">
           Living diff
         </p>
-        <h1 className="mt-1 font-sans text-[32px] font-semibold tracking-tight text-ink-light">
+        <h1 className="mt-1 font-sans text-display-lg text-ink-light">
           Living Diff: Meta-Analysis Update
         </h1>
         <p className="mt-1 text-[14px] text-ink-muted-light">
@@ -53,20 +53,20 @@ export function Updates() {
       </div>
 
       {/* New-trial notification banner */}
-      <div className="flex flex-col justify-between gap-3 rounded-md border border-[#bfdbfe] bg-[#eff6ff] p-4 md:flex-row md:items-center">
+      <div className="flex flex-col justify-between gap-3 rounded-md border border-accent-border bg-accent-container p-4 md:flex-row md:items-center">
         <div className="flex items-center gap-3">
           <span className="relative flex h-2 w-2">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#2563eb] opacity-75" />
-            <span className="relative inline-flex h-2 w-2 rounded-full bg-[#2563eb]" />
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-accent opacity-75" />
+            <span className="relative inline-flex h-2 w-2 rounded-full bg-accent" />
           </span>
-          <span className="font-mono text-[12px] font-semibold uppercase tracking-wider text-[#1e3a8a]">
+          <span className="font-mono text-[12px] font-semibold uppercase tracking-wider text-on-accent-container">
             New results posted · {NEW_TRIAL.id} · {NEW_TRIAL.label} (2021)
           </span>
         </div>
         <button
           onClick={inject}
           disabled={injecting}
-          className="rounded-sm bg-[#2563eb] px-4 py-2 text-[13px] font-medium text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+          className="rounded-sm bg-accent px-4 py-2 text-[13px] font-medium text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {injecting ? "Re-pooling…" : `Inject ${NEW_TRIAL.label}`}
         </button>
@@ -79,7 +79,7 @@ export function Updates() {
       )}
 
       {!diff && !injecting && (
-        <p className="rounded-md border border-hairline-light bg-surface-container-low px-4 py-3 text-[13px] text-ink-muted-light">
+        <p className="rounded-md hairline bg-surface-container-low px-4 py-3 text-[13px] text-ink-muted-light">
           Inject the new trial to re-run the pooled analysis and compare it against
           the current version.
         </p>
@@ -90,7 +90,7 @@ export function Updates() {
           <div className="lg:col-span-6">
             <DiffTable diff={diff} previous={previous} current={current} />
           </div>
-          <section className="rounded-md border border-hairline-light bg-card-light p-6 lg:col-span-6">
+          <section className="rounded-md hairline bg-card-light p-6 lg:col-span-6">
             <h2 className="mb-4 text-[13px] font-medium text-ink-light">
               Updated forest plot
             </h2>

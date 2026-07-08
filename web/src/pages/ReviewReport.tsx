@@ -19,24 +19,24 @@ export function ReviewReport() {
 
   if (error) {
     return (
-      <div className="mx-auto max-w-4xl px-8 py-10">
+      <div className="mx-auto max-w-6xl px-8 py-10">
         <p className="font-mono text-[13px] text-risk-high">No such review.</p>
       </div>
     );
   }
   if (!result) {
     return (
-      <div className="mx-auto max-w-4xl px-8 py-10">
+      <div className="mx-auto max-w-6xl px-8 py-10">
         <p className="font-mono text-[13px] text-ink-muted-light">Loading report…</p>
       </div>
     );
   }
 
   return (
-    <div className="mx-auto max-w-4xl px-8 py-10">
+    <div className="mx-auto max-w-6xl px-8 py-10">
       <Link
         to={`/reviews/${id}/evidence`}
-        className="text-[11px] font-semibold uppercase tracking-wider text-ink-muted-light hover:text-secondary"
+        className="text-label-caps uppercase text-ink-muted-light hover:text-accent"
       >
         ← Evidence ledger
       </Link>

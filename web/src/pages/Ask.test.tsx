@@ -5,14 +5,21 @@ import { MemoryRouter } from "react-router-dom";
 import { Ask } from "./Ask";
 
 const start = vi.fn();
+let reviewState: { question: unknown; start: typeof start } = {
+  question: null,
+  start,
+};
 vi.mock("../lib/review", () => ({
-  useReview: () => ({ question: null, start }),
+  useReview: () => reviewState,
 }));
 vi.mock("../lib/api", () => ({ parseQuestion: vi.fn() }));
 import { parseQuestion } from "../lib/api";
 
 describe("Ask (dynamic PICO)", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    reviewState = { question: null, start };
+  });
 
   it("parses free text into editable PICO chips", async () => {
     vi.mocked(parseQuestion).mockResolvedValue({
@@ -45,5 +52,35 @@ describe("Ask (dynamic PICO)", () => {
     expect(screen.getByLabelText("Outcome")).toHaveValue("Stroke");
     expect(screen.getByText(/2 candidate trials · pooling RR/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Run review/i })).toBeInTheDocument();
+  });
+
+  it("seeds the demo question once but lets you clear it and type a new one", async () => {
+    reviewState = {
+      question: {
+        id: "glp1-mace",
+        text: "Demo MACE question?",
+        pico: { population: "p", intervention: "i", comparator: "c", outcome: "o" },
+        measure: "HR",
+        trial_ids: [],
+      },
+      start,
+    };
+
+    render(
+      <MemoryRouter>
+        <Ask />
+      </MemoryRouter>
+    );
+
+    const box = screen.getByLabelText("Clinical question");
+    // Seeded once for convenience...
+    expect(box).toHaveValue("Demo MACE question?");
+
+    // ...but clearing it must NOT snap back to the demo question.
+    await userEvent.clear(box);
+    expect(box).toHaveValue("");
+
+    await userEvent.type(box, "A brand new question?");
+    expect(box).toHaveValue("A brand new question?");
   });
 });

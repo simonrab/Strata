@@ -19,28 +19,28 @@ export function SnapshotView() {
 
   if (error) {
     return (
-      <div className="mx-auto max-w-4xl px-8 py-10">
+      <div className="mx-auto max-w-6xl px-8 py-10">
         <p className="font-mono text-[13px] text-risk-high">No such snapshot.</p>
       </div>
     );
   }
   if (!result) {
     return (
-      <div className="mx-auto max-w-4xl px-8 py-10">
+      <div className="mx-auto max-w-6xl px-8 py-10">
         <p className="font-mono text-[13px] text-ink-muted-light">Loading snapshot…</p>
       </div>
     );
   }
 
   return (
-    <div className="mx-auto max-w-4xl px-8 py-10">
+    <div className="mx-auto max-w-6xl px-8 py-10">
       <Link
         to={`/reviews/${id}/audit`}
-        className="text-[11px] font-semibold uppercase tracking-wider text-ink-muted-light hover:text-secondary"
+        className="text-label-caps uppercase text-ink-muted-light hover:text-accent"
       >
         ← Audit trail
       </Link>
-      <div className="mt-4 rounded-sm border border-[#bfdbfe] bg-[#eff6ff] px-4 py-2 font-mono text-[12px] text-[#1e3a8a]">
+      <div className="mt-4 rounded-sm border border-accent-border bg-accent-container px-4 py-2 font-mono text-[12px] text-on-accent-container">
         Read-only archived snapshot · v{version}
       </div>
       <div className="mt-4">

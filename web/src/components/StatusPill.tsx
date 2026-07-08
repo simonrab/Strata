@@ -1,3 +1,4 @@
+import { Icon } from "./Icon";
 import type { TrialExtraction, ValidationResult } from "../lib/types";
 
 export type TrialStatus = "pooled" | "review" | "confirmed";
@@ -11,24 +12,24 @@ export function trialStatus(
   return "pooled";
 }
 
-const styles: Record<TrialStatus, string> = {
-  pooled: "bg-[#e0f2fe] text-[#0369a1] border-[#bae6fd]",
-  confirmed: "bg-[#dcfce7] text-[#15803d] border-[#bbf7d0]",
-  review: "bg-[#fef3c7] text-[#b45309] border-[#fde68a]",
-};
-
-const labels: Record<TrialStatus, string> = {
-  pooled: "Pooled",
-  confirmed: "Confirmed",
-  review: "Review",
+const config: Record<TrialStatus, { label: string; icon: string; box: string }> = {
+  pooled: { label: "Pooled", icon: "check_circle", box: "bg-accent-container text-accent" },
+  confirmed: {
+    label: "Confirmed",
+    icon: "verified",
+    box: "bg-risk-low-container text-risk-low",
+  },
+  review: { label: "Review", icon: "pending", box: "bg-risk-some-container text-risk-some" },
 };
 
 export function StatusPill({ status }: { status: TrialStatus }) {
+  const c = config[status];
   return (
     <span
-      className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${styles[status]}`}
+      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${c.box}`}
     >
-      {labels[status]}
+      <Icon name={c.icon} size={13} fill />
+      <span>{c.label}</span>
     </span>
   );
 }

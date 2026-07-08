@@ -10,6 +10,14 @@ import type {
   SnapshotMeta,
 } from "./types";
 
+// In production the backend lives on a different origin (Railway); VITE_API_URL
+// points there. Unset in dev, so requests stay relative and hit the Vite proxy.
+const API_BASE = (import.meta.env.VITE_API_URL ?? "").replace(/\/$/, "");
+
+function apiUrl(path: string): string {
+  return `${API_BASE}${path}`;
+}
+
 async function json<T>(res: Response): Promise<T> {
   if (!res.ok) {
     throw new Error(`${res.status} ${res.statusText}`);
@@ -19,7 +27,7 @@ async function json<T>(res: Response): Promise<T> {
 
 export async function parseQuestion(text: string): Promise<Question> {
   return json<Question>(
-    await fetch("/api/parse", {
+    await fetch(apiUrl("/api/parse"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ text }),
@@ -28,11 +36,13 @@ export async function parseQuestion(text: string): Promise<Question> {
 }
 
 export async function listReviews(): Promise<ReviewSummary[]> {
-  return json<ReviewSummary[]>(await fetch("/api/reviews"));
+  return json<ReviewSummary[]>(await fetch(apiUrl("/api/reviews")));
 }
 
 export async function getReview(id: string): Promise<ReviewResult> {
-  return json<ReviewResult>(await fetch(`/api/reviews/${encodeURIComponent(id)}`));
+  return json<ReviewResult>(
+    await fetch(apiUrl(`/api/reviews/${encodeURIComponent(id)}`))
+  );
 }
 
 export async function postDecision(
@@ -40,7 +50,7 @@ export async function postDecision(
   decision: Pick<ReviewDecision, "study_id" | "decision" | "reason">
 ): Promise<ReviewResult> {
   return json<ReviewResult>(
-    await fetch(`/api/reviews/${encodeURIComponent(id)}/decision`, {
+    await fetch(apiUrl(`/api/reviews/${encodeURIComponent(id)}/decision`), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(decision),
@@ -53,7 +63,7 @@ export async function postRobDecision(
   decision: { study_id: string; domain_key: string; reason?: string | null }
 ): Promise<ReviewResult> {
   return json<ReviewResult>(
-    await fetch(`/api/reviews/${encodeURIComponent(id)}/rob/decision`, {
+    await fetch(apiUrl(`/api/reviews/${encodeURIComponent(id)}/rob/decision`), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(decision),
@@ -65,13 +75,13 @@ export async function postRobDecision(
 
 export async function seedDemo(): Promise<ReviewResult> {
   return json<ReviewResult>(
-    await fetch("/api/reviews/demo/seed", { method: "POST" })
+    await fetch(apiUrl("/api/reviews/demo/seed"), { method: "POST" })
   );
 }
 
 export async function postUpdate(id: string, newTrialId: string): Promise<ReviewDiff> {
   return json<ReviewDiff>(
-    await fetch(`/api/reviews/${encodeURIComponent(id)}/update`, {
+    await fetch(apiUrl(`/api/reviews/${encodeURIComponent(id)}/update`), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ new_trial_id: newTrialId }),
@@ -81,12 +91,12 @@ export async function postUpdate(id: string, newTrialId: string): Promise<Review
 
 export async function getHistory(id: string): Promise<SnapshotMeta[]> {
   return json<SnapshotMeta[]>(
-    await fetch(`/api/reviews/${encodeURIComponent(id)}/history`)
+    await fetch(apiUrl(`/api/reviews/${encodeURIComponent(id)}/history`))
   );
 }
 
 export async function getVersion(id: string, version: number): Promise<ReviewResult> {
   return json<ReviewResult>(
-    await fetch(`/api/reviews/${encodeURIComponent(id)}/versions/${version}`)
+    await fetch(apiUrl(`/api/reviews/${encodeURIComponent(id)}/versions/${version}`))
   );
 }

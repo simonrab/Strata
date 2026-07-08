@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { getHistory } from "../lib/api";
+import { Icon } from "../components/Icon";
 import type { SnapshotMeta } from "../lib/types";
 
 function statusFor(meta: SnapshotMeta, latest: number): string {
@@ -30,11 +31,11 @@ export function AuditTrail() {
 
   return (
     <div className="mx-auto max-w-4xl space-y-6 px-8 py-10">
-      <div className="border-b border-hairline-light pb-4">
-        <p className="text-[11px] font-semibold uppercase tracking-wider text-outline">
+      <div className="hairline-b pb-4">
+        <p className="text-label-caps uppercase text-outline">
           History
         </p>
-        <h1 className="mt-1 font-sans text-[32px] font-semibold tracking-tight text-ink-light">
+        <h1 className="mt-1 font-sans text-display-lg text-ink-light">
           Audit Trail
         </h1>
         <p className="mt-1 text-[14px] text-ink-muted-light">
@@ -47,14 +48,14 @@ export function AuditTrail() {
       )}
 
       {history && history.length === 0 && (
-        <p className="rounded-md border border-hairline-light bg-surface-container-low px-4 py-3 text-[13px] text-ink-muted-light">
+        <p className="rounded-md hairline bg-surface-container-low px-4 py-3 text-[13px] text-ink-muted-light">
           No runs yet for this review.
         </p>
       )}
 
       {rows.length > 0 && (
-        <div className="overflow-hidden rounded-md border border-hairline-light bg-card-light">
-          <div className="grid grid-cols-12 gap-3 border-b border-hairline-light bg-surface-container-low p-3 text-[11px] font-semibold uppercase tracking-wider text-ink-muted-light">
+        <div className="overflow-hidden rounded-md hairline bg-card-light">
+          <div className="grid grid-cols-12 gap-3 hairline-b bg-surface-container-low p-3 text-label-caps uppercase text-ink-muted-light">
             <div className="col-span-3">Date</div>
             <div className="col-span-6">Run snapshot</div>
             <div className="col-span-3 text-right">Status</div>
@@ -65,7 +66,7 @@ export function AuditTrail() {
               <Link
                 key={m.version}
                 to={`/reviews/${id}/versions/${m.version}`}
-                className="grid grid-cols-12 items-center gap-3 border-b border-hairline-light p-3 last:border-0 hover:bg-surface-container-low"
+                className="grid grid-cols-12 items-center gap-3 hairline-b p-3 last:border-0 hover:bg-surface-container-low"
               >
                 <div className="col-span-3 font-mono text-[12px] text-ink-muted-light">
                   {m.created_at.slice(0, 10)}
@@ -79,12 +80,17 @@ export function AuditTrail() {
                   </p>
                 </div>
                 <div className="col-span-3 flex items-center justify-end gap-2">
-                  {status === "Current" && (
-                    <span className="h-2 w-2 rounded-full bg-[#10b981]" />
+                  {status === "Current" ? (
+                    <span className="inline-flex items-center gap-1.5 rounded-full hairline bg-surface-container-highest px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-ink-light">
+                      <span className="h-1.5 w-1.5 rounded-full bg-risk-low" />
+                      Current
+                    </span>
+                  ) : (
+                    <span className="font-mono text-[10px] uppercase tracking-wider text-ink-muted-light">
+                      {status}
+                    </span>
                   )}
-                  <span className="font-mono text-[11px] uppercase tracking-wider text-ink-muted-light">
-                    {status}
-                  </span>
+                  <Icon name="chevron_right" size={18} className="text-outline-variant" />
                 </div>
               </Link>
             );
@@ -92,23 +98,23 @@ export function AuditTrail() {
         </div>
       )}
 
-      <div className="rounded-md border border-hairline-light bg-surface-container-low p-6">
+      <div className="rounded-md hairline bg-surface-container-low p-6">
         <h2 className="mb-2 text-[13px] font-medium text-ink-light">
           Snapshot architecture notes
         </h2>
-        <p className="max-w-[60ch] font-serif text-[15px] leading-6 text-ink-muted-light">
+        <p className="max-w-[60ch] font-serif text-[14px] leading-6 text-ink-muted-light">
           Each run snapshot is immutable. Selecting a previous run loads a read-only
           view, preserving the exact evidence, bias assessments, and GRADE certainty
           that were active when it was computed.
         </p>
         <div className="mt-4 grid grid-cols-2 gap-3">
-          <div className="rounded-sm border border-hairline-light bg-card-light p-3">
+          <div className="rounded-sm hairline bg-card-light p-3">
             <p className="text-[10px] font-semibold uppercase tracking-wider text-outline">
               Store
             </p>
             <p className="mt-1 font-mono text-[12px] text-ink-light">SQLite · livemeta.db</p>
           </div>
-          <div className="rounded-sm border border-hairline-light bg-card-light p-3">
+          <div className="rounded-sm hairline bg-card-light p-3">
             <p className="text-[10px] font-semibold uppercase tracking-wider text-outline">
               Snapshot key
             </p>
