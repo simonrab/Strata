@@ -6,7 +6,7 @@ direction of effect flips (estimate crossing 1).
 
 import math
 
-from livemeta.core.diff import diff_reviews
+from livemeta.core.diff import diff_reviews, status_from_diff
 from livemeta.core.schema import (
     CIMethod,
     EffectMeasure,
@@ -86,3 +86,27 @@ def test_added_trials_detected():
     assert d.added_trials == ["C"]
     assert d.k_prev == 2
     assert d.k_curr == 3
+
+
+# --- Slice 5: the dashboard's three-state status is derived from the diff ------
+
+
+def test_status_unchanged_when_estimate_barely_moves():
+    prev = _review(0.86, 0.79, 0.94)
+    curr = _review(0.86, 0.79, 0.94)
+    d = diff_reviews(prev, curr, previous_version=1, current_version=2)
+    assert status_from_diff(d) == "unchanged"
+
+
+def test_status_estimate_updated_when_estimate_moves_but_conclusion_holds():
+    prev = _review(0.86, 0.79, 0.94)
+    curr = _review(0.82, 0.75, 0.90)  # still a significant benefit
+    d = diff_reviews(prev, curr, previous_version=1, current_version=2)
+    assert status_from_diff(d) == "estimate-updated"
+
+
+def test_status_conclusion_moved_when_significance_flips():
+    prev = _review(0.86, 0.79, 0.94)  # significant benefit
+    curr = _review(0.92, 0.84, 1.01)  # CI now crosses 1 -> no longer significant
+    d = diff_reviews(prev, curr, previous_version=1, current_version=2)
+    assert status_from_diff(d) == "conclusion-moved"

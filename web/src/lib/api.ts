@@ -1,7 +1,14 @@
 // Typed REST client for the LiveMeta backend. The WebSocket run flow lives in
 // review.tsx; everything request/response goes through here.
 
-import type { Question, ReviewDecision, ReviewResult, ReviewSummary } from "./types";
+import type {
+  Question,
+  ReviewDecision,
+  ReviewDiff,
+  ReviewResult,
+  ReviewSummary,
+  SnapshotMeta,
+} from "./types";
 
 async function json<T>(res: Response): Promise<T> {
   if (!res.ok) {
@@ -51,5 +58,35 @@ export async function postRobDecision(
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(decision),
     })
+  );
+}
+
+// --- Living layer: inject a trial, read the version history ------------------
+
+export async function seedDemo(): Promise<ReviewResult> {
+  return json<ReviewResult>(
+    await fetch("/api/reviews/demo/seed", { method: "POST" })
+  );
+}
+
+export async function postUpdate(id: string, newTrialId: string): Promise<ReviewDiff> {
+  return json<ReviewDiff>(
+    await fetch(`/api/reviews/${encodeURIComponent(id)}/update`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ new_trial_id: newTrialId }),
+    })
+  );
+}
+
+export async function getHistory(id: string): Promise<SnapshotMeta[]> {
+  return json<SnapshotMeta[]>(
+    await fetch(`/api/reviews/${encodeURIComponent(id)}/history`)
+  );
+}
+
+export async function getVersion(id: string, version: number): Promise<ReviewResult> {
+  return json<ReviewResult>(
+    await fetch(`/api/reviews/${encodeURIComponent(id)}/versions/${version}`)
   );
 }

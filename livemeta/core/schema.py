@@ -323,6 +323,23 @@ class ReviewSummary(BaseModel):
     status: str = "unchanged"  # unchanged | estimate-updated | conclusion-moved
 
 
+class SnapshotMeta(BaseModel):
+    """One row of a question's version history — the audit-trail timeline.
+
+    Headline pool numbers are denormalized here so the history list renders
+    without deserializing each full ReviewResult.
+    """
+
+    question_id: str
+    version: int
+    created_at: str  # ISO-8601, UTC
+    k: int = 0
+    estimate: float | None = None
+    ci_low: float | None = None
+    ci_high: float | None = None
+    measure: str = "HR"
+
+
 class ReviewDiff(BaseModel):
     """How a re-run compares to the previous snapshot of a question.
 

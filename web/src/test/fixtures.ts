@@ -1,4 +1,9 @@
-import type { ReviewResult, ReviewSummary } from "../lib/types";
+import type {
+  ReviewDiff,
+  ReviewResult,
+  ReviewSummary,
+  SnapshotMeta,
+} from "../lib/types";
 
 export const reviewFixture: ReviewResult = {
   question: {
@@ -171,5 +176,48 @@ export const summariesFixture: ReviewSummary[] = [
     ci_high: 0.94,
     measure: "HR",
     status: "unchanged",
+  },
+];
+
+// A living update: the 7-trial baseline (v1) grew to 8 when AMPLITUDE-O landed.
+// The estimate refined but the benefit still holds (conclusion unchanged).
+export const diffFixture: ReviewDiff = {
+  question_id: "glp1-mace",
+  previous_version: 1,
+  current_version: 2,
+  estimate_prev: 0.88,
+  estimate_curr: 0.86,
+  delta: -0.02,
+  ci_prev: [0.81, 0.96],
+  ci_curr: [0.79, 0.94],
+  k_prev: 7,
+  k_curr: 8,
+  added_trials: ["NCT03496298"],
+  significance_changed: false,
+  direction_changed: false,
+  conclusion_changed: false,
+  notes: [],
+};
+
+export const historyFixture: SnapshotMeta[] = [
+  {
+    question_id: "glp1-mace",
+    version: 1,
+    created_at: "2026-07-08T09:00:00+00:00",
+    k: 7,
+    estimate: 0.88,
+    ci_low: 0.81,
+    ci_high: 0.96,
+    measure: "HR",
+  },
+  {
+    question_id: "glp1-mace",
+    version: 2,
+    created_at: "2026-07-08T10:30:00+00:00",
+    k: 8,
+    estimate: 0.86,
+    ci_low: 0.79,
+    ci_high: 0.94,
+    measure: "HR",
   },
 ];

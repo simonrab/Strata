@@ -4,7 +4,17 @@ Minimal JSON store standing in for Slice 5's SQLite; the version list is the
 audit-trail history.
 """
 
-from livemeta.core.schema import PICO, Question, ReviewDecision, ReviewResult, RobDecision
+from livemeta.core.schema import (
+    PICO,
+    CIMethod,
+    EffectMeasure,
+    PoolResult,
+    Question,
+    ReviewDecision,
+    ReviewResult,
+    RobDecision,
+    SnapshotMeta,
+)
 from livemeta.core.store import SnapshotStore
 
 
@@ -15,6 +25,34 @@ def _review(summary: str, qid: str = "q-demo") -> ReviewResult:
         pico=PICO(population="p", intervention="i", comparator="c", outcome="o"),
     )
     return ReviewResult(question=q, summary=summary)
+
+
+def _review_with_pool(estimate: float, qid: str = "q-demo") -> ReviewResult:
+    """A review carrying a pool, so the store's denormalized headline columns
+    (k / estimate / ci) have something real to reflect."""
+    q = Question(
+        id=qid,
+        text="demo",
+        pico=PICO(population="p", intervention="i", comparator="c", outcome="o"),
+    )
+    pool = PoolResult(
+        measure=EffectMeasure.HR,
+        engine="python",
+        k=8,
+        estimate=estimate,
+        ci_low=estimate - 0.07,
+        ci_high=estimate + 0.08,
+        ci_method=CIMethod.HKSJ,
+        estimate_log=-0.15,
+        se_log=0.04,
+        ci_low_log=-0.24,
+        ci_high_log=-0.06,
+        tau2=0.004,
+        i2=45.0,
+        q=12.0,
+        q_p=0.08,
+    )
+    return ReviewResult(question=q, pool=pool)
 
 
 def test_save_increments_versions_and_load_latest_returns_newest(tmp_path):
@@ -93,3 +131,46 @@ def test_rob_decisions_round_trip_latest_per_domain_wins(tmp_path):
     # RoB sign-offs don't disturb the trial decision list or the version history.
     assert store.load_decisions("q-demo") == []
     assert store.list_versions("q-demo") == [1]
+
+
+# --- Slice 5: audit-trail read paths -----------------------------------------
+
+
+def test_load_version_returns_the_specific_version(tmp_path):
+    store = SnapshotStore(tmp_path)
+    store.save_snapshot(_review("first"))
+    store.save_snapshot(_review("second"))
+    store.save_snapshot(_review("third"))
+
+    assert store.load_version("q-demo", 2).summary == "second"
+    assert store.load_version("q-demo", 1).summary == "first"
+    # A version that was never written — or a question that doesn't exist — is None.
+    assert store.load_version("q-demo", 99) is None
+    assert store.load_version("nope", 1) is None
+
+
+def test_list_snapshots_returns_meta_with_timestamps(tmp_path):
+    store = SnapshotStore(tmp_path)
+    store.save_snapshot(_review_with_pool(0.88))
+    store.save_snapshot(_review_with_pool(0.86))
+
+    metas = store.list_snapshots("q-demo")
+    assert [m.version for m in metas] == [1, 2]
+    assert all(isinstance(m, SnapshotMeta) for m in metas)
+    # Every snapshot is timestamped, and time only moves forward.
+    assert all(m.created_at for m in metas)
+    assert metas[0].created_at <= metas[1].created_at
+    # Headline pool numbers are denormalized onto the meta (no JSON parse needed).
+    assert metas[0].k == 8
+    assert round(metas[1].estimate, 2) == 0.86
+    # An unknown question has no history.
+    assert store.list_snapshots("nope") == []
+
+
+def test_snapshots_persist_to_a_single_sqlite_db_file(tmp_path):
+    store = SnapshotStore(tmp_path)
+    store.save_snapshot(_review("first"))
+
+    assert (tmp_path / "livemeta.db").exists()
+    # The JSON-per-question layout is gone — nothing but the DB is written.
+    assert list(tmp_path.glob("*.json")) == []

@@ -13,9 +13,32 @@ from __future__ import annotations
 from .pipeline import pool_direction, pool_significant
 from .schema import PoolResult, ReviewDiff, ReviewResult
 
+# A move smaller than this (relative to the previous estimate) is treated as
+# engine noise rather than a real shift, so identical re-runs read "unchanged".
+_REL_EPSILON = 0.005
+
 
 def _ci(pool: PoolResult | None) -> tuple[float, float] | None:
     return (pool.ci_low, pool.ci_high) if pool else None
+
+
+def status_from_diff(diff: ReviewDiff, *, rel_epsilon: float = _REL_EPSILON) -> str:
+    """Map a diff to the dashboard's three-state status.
+
+    Conclusion dominates: a flip in statistical significance or direction of
+    effect is "conclusion-moved". Otherwise a real (non-noise) move in the point
+    estimate is "estimate-updated"; anything smaller is "unchanged". Returns one
+    of: "unchanged" | "estimate-updated" | "conclusion-moved".
+    """
+    if diff.conclusion_changed:
+        return "conclusion-moved"
+    if (
+        diff.delta is not None
+        and diff.estimate_prev
+        and abs(diff.delta) / abs(diff.estimate_prev) >= rel_epsilon
+    ):
+        return "estimate-updated"
+    return "unchanged"
 
 
 def diff_reviews(

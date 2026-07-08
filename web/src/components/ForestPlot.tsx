@@ -1,9 +1,18 @@
 import type { PoolResult } from "../lib/types";
 
 // Log-scale forest plot rendered as inline SVG from pooled study rows.
-export function ForestPlot({ pool }: { pool: PoolResult }) {
+// `highlightStudyIds` accents newly injected trials (the living-update view);
+// omit it for the standard report and the plot renders exactly as before.
+export function ForestPlot({
+  pool,
+  highlightStudyIds = [],
+}: {
+  pool: PoolResult;
+  highlightStudyIds?: string[];
+}) {
   const rows = pool.studies;
   const measure = pool.measure;
+  const highlighted = new Set(highlightStudyIds);
 
   const lows = rows.map((r) => r.ci_low).concat(pool.ci_low);
   const highs = rows.map((r) => r.ci_high).concat(pool.ci_high);
@@ -55,16 +64,32 @@ export function ForestPlot({ pool }: { pool: PoolResult }) {
       {rows.map((r, i) => {
         const y = top + i * rowH + rowH / 2;
         const side = Math.max(4, Math.min(14, r.weight)); // square sized by weight
+        const isNew = highlighted.has(r.study_id);
+        const mark = isNew ? "fill-[#2563eb]" : "fill-ink-light";
         return (
           <g key={r.study_id}>
-            <text x={16} y={y + 3} fontSize="11" className="fill-ink-light">
+            <text
+              x={16}
+              y={y + 3}
+              fontSize="11"
+              className={isNew ? "fill-[#2563eb]" : "fill-ink-light"}
+              fontWeight={isNew ? "600" : "400"}
+            >
               {r.study_id}
             </text>
+            {isNew && (
+              <g>
+                <rect x={112} y={y - 8} width={26} height={12} rx={2} className="fill-[#2563eb]" />
+                <text x={125} y={y + 1} fontSize="8" textAnchor="middle" fontWeight="700" className="fill-white">
+                  New
+                </text>
+              </g>
+            )}
             <line x1={x(r.ci_low)} y1={y} x2={x(r.ci_high)} y2={y}
-              stroke="currentColor" className="text-ink-light" strokeWidth="1" />
+              stroke="currentColor" className={isNew ? "text-[#2563eb]" : "text-ink-light"} strokeWidth={isNew ? "1.5" : "1"} />
             <rect x={x(r.effect) - side / 2} y={y - side / 2} width={side} height={side}
-              className="fill-ink-light" />
-            <text x={plotRight + 16} y={y + 3} fontSize="11" className="fill-ink-light">
+              className={mark} />
+            <text x={plotRight + 16} y={y + 3} fontSize="11" className={isNew ? "fill-[#2563eb]" : "fill-ink-light"}>
               {r.effect.toFixed(2)} [{r.ci_low.toFixed(2)}, {r.ci_high.toFixed(2)}]
             </text>
           </g>

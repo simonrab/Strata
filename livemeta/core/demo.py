@@ -35,3 +35,25 @@ GLP1_MACE_QUESTION = Question(
     measure=EffectMeasure.HR,
     trial_ids=GLP1_CVOT_TRIALS,
 )
+
+# The living-layer demo: seed the review as it stood *before* the last CVOT read
+# out, then inject that trial to reach today's published 8-trial answer. AMPLITUDE-O
+# (efpeglenatide, 2021) is the most-recent readout and its fixture already exists.
+HELD_OUT_TRIAL = "NCT03496298"  # AMPLITUDE-O
+GLP1_BASELINE_QUESTION = GLP1_MACE_QUESTION.model_copy(
+    update={"trial_ids": GLP1_CVOT_TRIALS[:7]}
+)
+
+
+def seed_baseline(store, fetch_study):
+    """Persist the 7-trial baseline (v1) so the demo can inject the eighth.
+
+    Goes through `run_review_collect` directly rather than the MCP `run_review`
+    tool, whose `_resolve_question` special-cases the glp1-mace id back to the
+    full 8-trial question — which would erase the diff the demo exists to show.
+    """
+    from .pipeline import run_review_collect  # local: avoid import-time weight
+
+    result = run_review_collect(GLP1_BASELINE_QUESTION, fetch_study)
+    store.save_snapshot(result)
+    return result

@@ -29,6 +29,25 @@ describe("Dashboard", () => {
     expect(row).toHaveAttribute("href", "/reviews/glp1-mace/evidence");
   });
 
+  it("renders the living status pill for each review", async () => {
+    vi.mocked(listReviews).mockResolvedValue([
+      { ...summariesFixture[0], status: "estimate-updated" },
+      {
+        ...summariesFixture[0],
+        question_id: "sglt2-hf",
+        text: "Do SGLT2 inhibitors reduce heart-failure hospitalization?",
+        status: "conclusion-moved",
+      },
+    ]);
+    render(
+      <MemoryRouter>
+        <Dashboard />
+      </MemoryRouter>
+    );
+    expect(await screen.findByText("Estimate updated")).toBeInTheDocument();
+    expect(screen.getByText("Conclusion moved")).toBeInTheDocument();
+  });
+
   it("shows an empty state when there are no reviews", async () => {
     vi.mocked(listReviews).mockResolvedValue([]);
     render(

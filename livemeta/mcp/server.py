@@ -22,11 +22,11 @@ from mcp.server.fastmcp import FastMCP
 from ..core import demo
 from ..core import extract as extract_mod
 from ..core import grade as grade_mod
+from ..core import living as living_mod
 from ..core import llm as llm_mod
 from ..core import rob as rob_mod
 from ..core import search as search_mod
 from ..core import validate as validate_mod
-from ..core.diff import diff_reviews
 from ..core.pipeline import repool_with_decisions, run_review_collect
 from ..core.schema import (
     EffectMeasure,
@@ -239,29 +239,11 @@ def update(question_id: str, new_trial_id: str) -> ReviewDiff:
 
     The living layer: returns the new pooled estimate, the added trial, and —
     the load-bearing signal — whether the conclusion changed (a flip in
-    statistical significance or in the direction of effect).
+    statistical significance or in the direction of effect). Shares its core with
+    the REST update endpoint via `living.apply_update` so the two can't diverge.
     """
-    store = get_store()
-    previous = store.load_latest(question_id)
-    if previous is None:
-        raise ValueError(
-            f"No existing review for question_id {question_id!r}; run `run_review` first."
-        )
-    previous_version = store.list_versions(question_id)[-1]
-
-    trial_ids = list(previous.question.trial_ids)
-    if new_trial_id not in trial_ids:
-        trial_ids.append(new_trial_id)
-    new_question = previous.question.model_copy(update={"trial_ids": trial_ids})
-
-    current = run_review_collect(new_question, get_client().fetch_study)
-    current_version = store.save_snapshot(current)
-
-    return diff_reviews(
-        previous,
-        current,
-        previous_version=previous_version,
-        current_version=current_version,
+    return living_mod.apply_update(
+        get_store(), question_id, new_trial_id, get_client().fetch_study
     )
 
 

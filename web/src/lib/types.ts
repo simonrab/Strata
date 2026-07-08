@@ -158,3 +158,32 @@ export interface PipelineEvent {
   message: string;
   data: unknown;
 }
+
+export interface ReviewDiff {
+  question_id: string;
+  previous_version: number;
+  current_version: number;
+  estimate_prev: number | null;
+  estimate_curr: number | null;
+  delta: number | null;
+  ci_prev: [number, number] | null;
+  ci_curr: [number, number] | null;
+  k_prev: number;
+  k_curr: number;
+  added_trials: string[];
+  significance_changed: boolean;
+  direction_changed: boolean;
+  conclusion_changed: boolean;
+  notes: string[];
+}
+
+export interface SnapshotMeta {
+  question_id: string;
+  version: number;
+  created_at: string;
+  k: number;
+  estimate: number | null;
+  ci_low: number | null;
+  ci_high: number | null;
+  measure: string;
+}

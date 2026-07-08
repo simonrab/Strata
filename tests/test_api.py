@@ -4,6 +4,7 @@ Driven offline: the CT.gov fetch dependency is overridden with recorded fixtures
 """
 
 import json
+import math
 from pathlib import Path
 
 import pytest
@@ -11,10 +12,39 @@ from fastapi.testclient import TestClient
 
 from livemeta.api.app import app, get_fetch_study, get_parse, get_store
 from livemeta.core import demo
-from livemeta.core.schema import PICO, Question
+from livemeta.core.schema import (
+    PICO,
+    CIMethod,
+    EffectMeasure,
+    PoolResult,
+    Question,
+    ReviewResult,
+)
 from livemeta.core.store import SnapshotStore
 
 FIXTURES = Path(__file__).parent / "fixtures"
+
+
+def _review_with_estimate(estimate: float, ci_low: float, ci_high: float) -> ReviewResult:
+    """A glp1-mace ReviewResult with a chosen pooled estimate, for status tests."""
+    pool = PoolResult(
+        measure=EffectMeasure.HR,
+        engine="python",
+        k=8,
+        estimate=estimate,
+        ci_low=ci_low,
+        ci_high=ci_high,
+        ci_method=CIMethod.HKSJ,
+        estimate_log=math.log(estimate),
+        se_log=0.04,
+        ci_low_log=math.log(ci_low),
+        ci_high_log=math.log(ci_high),
+        tau2=0.004,
+        i2=30.0,
+        q=10.0,
+        q_p=0.2,
+    )
+    return ReviewResult(question=demo.GLP1_MACE_QUESTION, pool=pool)
 
 
 def _fixture_fetch():
@@ -111,6 +141,26 @@ def test_list_reviews_reflects_saved_snapshots(store):
     assert row["k"] == 8
 
 
+def test_list_reviews_status_is_estimate_updated_when_estimate_moves(store):
+    store.save_snapshot(_review_with_estimate(0.88, 0.81, 0.96))  # v1
+    store.save_snapshot(_review_with_estimate(0.86, 0.79, 0.94))  # v2, still significant
+    row = next(r for r in client.get("/api/reviews").json() if r["question_id"] == "glp1-mace")
+    assert row["status"] == "estimate-updated"
+
+
+def test_list_reviews_status_is_conclusion_moved_when_significance_flips(store):
+    store.save_snapshot(_review_with_estimate(0.86, 0.79, 0.94))  # v1, significant
+    store.save_snapshot(_review_with_estimate(0.92, 0.84, 1.01))  # v2, CI now crosses 1
+    row = next(r for r in client.get("/api/reviews").json() if r["question_id"] == "glp1-mace")
+    assert row["status"] == "conclusion-moved"
+
+
+def test_list_reviews_status_is_unchanged_with_a_single_version(store):
+    store.save_snapshot(_review_with_estimate(0.86, 0.79, 0.94))
+    row = next(r for r in client.get("/api/reviews").json() if r["question_id"] == "glp1-mace")
+    assert row["status"] == "unchanged"
+
+
 def test_get_review_returns_latest_and_404s_when_missing(store):
     store.save_snapshot(_demo_review())
     r = client.get("/api/reviews/glp1-mace")
@@ -118,6 +168,70 @@ def test_get_review_returns_latest_and_404s_when_missing(store):
     assert len(r.json()["extractions"]) == 8
 
     assert client.get("/api/reviews/does-not-exist").status_code == 404
+
+
+def test_seed_demo_creates_seven_trial_baseline(store):
+    r = client.post("/api/reviews/demo/seed")
+    assert r.status_code == 200
+    assert store.list_versions("glp1-mace") == [1]
+    latest = store.load_latest("glp1-mace")
+    assert len(latest.question.trial_ids) == 7
+    assert demo.HELD_OUT_TRIAL not in latest.question.trial_ids
+    # Idempotent: seeding again does not add a version.
+    client.post("/api/reviews/demo/seed")
+    assert store.list_versions("glp1-mace") == [1]
+
+
+def _seed_seven(store):
+    """Persist a 7-trial GLP-1 baseline (v1) so an inject can add the eighth."""
+    from livemeta.core.pipeline import run_review_collect
+
+    q7 = demo.GLP1_MACE_QUESTION.model_copy(
+        update={"trial_ids": demo.GLP1_CVOT_TRIALS[:7]}
+    )
+    store.save_snapshot(run_review_collect(q7, _fixture_fetch()))
+
+
+def test_update_endpoint_adds_trial_and_returns_diff(store):
+    _seed_seven(store)
+    r = client.post(
+        "/api/reviews/glp1-mace/update",
+        json={"new_trial_id": demo.GLP1_CVOT_TRIALS[7]},
+    )
+    assert r.status_code == 200
+    diff = r.json()
+    assert diff["k_curr"] == 8
+    assert demo.GLP1_CVOT_TRIALS[7] in diff["added_trials"]
+    assert isinstance(diff["conclusion_changed"], bool)
+    assert store.list_versions("glp1-mace") == [1, 2]
+
+
+def test_update_endpoint_404_when_no_review(store):
+    r = client.post(
+        "/api/reviews/does-not-exist/update", json={"new_trial_id": "NCT00000001"}
+    )
+    assert r.status_code == 404
+
+
+def test_history_endpoint_lists_snapshot_metas(store):
+    store.save_snapshot(_review_with_estimate(0.88, 0.81, 0.96))
+    store.save_snapshot(_review_with_estimate(0.86, 0.79, 0.94))
+    r = client.get("/api/reviews/glp1-mace/history")
+    assert r.status_code == 200
+    metas = r.json()
+    assert [m["version"] for m in metas] == [1, 2]
+    assert all(m["created_at"] for m in metas)
+    assert round(metas[1]["estimate"], 2) == 0.86
+    # An unknown review has no history rather than a 404.
+    assert client.get("/api/reviews/nope/history").json() == []
+
+
+def test_version_endpoint_returns_past_result_and_404s(store):
+    store.save_snapshot(_review_with_estimate(0.88, 0.81, 0.96))
+    r = client.get("/api/reviews/glp1-mace/versions/1")
+    assert r.status_code == 200
+    assert r.json()["question"]["id"] == "glp1-mace"
+    assert client.get("/api/reviews/glp1-mace/versions/99").status_code == 404
 
 
 def test_decision_endpoint_flags_trial_and_repools(store):

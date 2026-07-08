@@ -39,4 +39,14 @@ describe("ForestPlot", () => {
     expect(container.querySelector("polygon")).toBeInTheDocument();
     expect(container.querySelectorAll("rect").length).toBe(2);
   });
+
+  it("badges a highlighted study, and none without the prop", () => {
+    const withHl = render(
+      <ForestPlot pool={pool} highlightStudyIds={["SUSTAIN-6"]} />
+    );
+    expect(withHl.getByText("New")).toBeInTheDocument();
+    withHl.unmount();
+    const noHl = render(<ForestPlot pool={pool} />);
+    expect(noHl.queryByText("New")).toBeNull();
+  });
 });

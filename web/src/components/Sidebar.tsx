@@ -21,14 +21,16 @@ function useCurrentReviewId(): string | null {
   return pathname.match(/^\/reviews\/([^/]+)/)?.[1] ?? null;
 }
 
-const disabledFooter = ["Audit Trail", "Export", "Settings"];
+const disabledFooter = ["Export", "Settings"];
 
 export function Sidebar() {
   const reviewId = useCurrentReviewId();
   const analysis = reviewId
     ? [
+        { to: `/reviews/${reviewId}/updates`, label: "Updates" },
         { to: `/reviews/${reviewId}/rob`, label: "Risk of Bias" },
         { to: `/reviews/${reviewId}/grade`, label: "GRADE" },
+        { to: `/reviews/${reviewId}/audit`, label: "Audit Trail" },
       ]
     : [];
   return (
