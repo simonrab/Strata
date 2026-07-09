@@ -76,6 +76,54 @@ def test_overall_is_high_when_any_domain_is_high():
     assert a.overall == RobJudgment.HIGH
 
 
+def test_study_for_rob_trims_bulky_results_but_keeps_design():
+    # Full CT.gov records reach ~600KB and overflow the model's input. RoB 2 judges
+    # design/conduct, so keep the protocol + participant flow (dropouts) and drop
+    # the bulky results tables.
+    study = {
+        "protocolSection": {
+            "designModule": {"allocation": "RANDOMIZED"},
+            "identificationModule": {"nctId": "NCT9"},
+        },
+        "resultsSection": {
+            "participantFlowModule": {"flow": "kept"},
+            "outcomeMeasuresModule": {"huge": "x" * 10000},
+            "baselineCharacteristicsModule": {"big": "y" * 10000},
+        },
+    }
+    trimmed = rob._study_for_rob(study)
+    assert trimmed["protocolSection"]["designModule"] == {"allocation": "RANDOMIZED"}
+    assert trimmed["resultsSection"]["participantFlowModule"] == {"flow": "kept"}
+    assert "outcomeMeasuresModule" not in trimmed["resultsSection"]
+    assert "baselineCharacteristicsModule" not in trimmed["resultsSection"]
+    assert len(str(trimmed)) < len(str(study))
+
+
+def test_domains_map_by_position_when_model_uses_its_own_keys():
+    # Regression: the real model returns descriptive keys ("bias_randomization",
+    # ...), not our D1-D5. The five domains must still map by order, not silently
+    # collapse to all-PENDING because the keys didn't match.
+    parsed = rob._RobDomains(
+        domains=[
+            rob._RobDomainOut(key="bias_randomization", name="Randomization",
+                              judgment="low", rationale="r", quote="q"),
+            rob._RobDomainOut(key="bias_deviations", name="Deviations",
+                              judgment="low", rationale="r", quote="q"),
+            rob._RobDomainOut(key="bias_missing_data", name="Missing data",
+                              judgment="some_concerns", rationale="r", quote="q"),
+            rob._RobDomainOut(key="bias_measurement", name="Measurement",
+                              judgment="low", rationale="r", quote="q"),
+            rob._RobDomainOut(key="bias_selection", name="Selection",
+                              judgment="low", rationale="r", quote="q"),
+        ]
+    )
+    a = rob.assess_rob(STUDY, llm_client=_StubLLM(parsed=parsed))
+    assert [d.key for d in a.domains] == ["D1", "D2", "D3", "D4", "D5"]
+    assert all(d.judgment != RobJudgment.PENDING for d in a.domains)
+    assert a.domains[2].judgment == RobJudgment.SOME_CONCERNS
+    assert a.overall == RobJudgment.SOME_CONCERNS
+
+
 def test_no_client_yields_pending_never_fabricated():
     a = rob.assess_rob(STUDY, llm_client=None)
     assert a.overall == RobJudgment.PENDING
