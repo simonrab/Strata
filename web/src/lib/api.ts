@@ -58,6 +58,19 @@ export async function postDecision(
   );
 }
 
+export async function postDiversityDecision(
+  id: string,
+  reason?: string | null
+): Promise<ReviewResult> {
+  return json<ReviewResult>(
+    await fetch(apiUrl(`/api/reviews/${encodeURIComponent(id)}/diversity/decision`), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ reason: reason ?? null }),
+    })
+  );
+}
+
 export async function postRobDecision(
   id: string,
   decision: { study_id: string; domain_key: string; reason?: string | null }

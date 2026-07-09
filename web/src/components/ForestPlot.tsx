@@ -1,6 +1,10 @@
 import type { PoolResult } from "../lib/types";
+import { isRatioMeasure, nullEffect } from "../lib/types";
 
-// Log-scale forest plot rendered as inline SVG from pooled study rows.
+// Forest plot rendered as inline SVG from pooled study rows. Ratio measures
+// (RR/OR/HR) use a log x-axis with the no-effect line at 1; continuous measures
+// (MD/SMD) use a linear x-axis centred on 0 — a log axis would break on the
+// non-positive effects continuous outcomes routinely produce.
 // `highlightStudyIds` accents newly injected trials (the living-update view);
 // omit it for the standard report and the plot renders exactly as before.
 export function ForestPlot({
@@ -12,14 +16,12 @@ export function ForestPlot({
 }) {
   const rows = pool.studies;
   const measure = pool.measure;
+  const ratio = isRatioMeasure(measure);
+  const nul = nullEffect(measure);
   const highlighted = new Set(highlightStudyIds);
 
   const lows = rows.map((r) => r.ci_low).concat(pool.ci_low);
   const highs = rows.map((r) => r.ci_high).concat(pool.ci_high);
-  const min = Math.min(...lows, 0.5);
-  const max = Math.max(...highs, 2);
-  const logMin = Math.log(min);
-  const logMax = Math.log(max);
 
   const plotLeft = 320;
   const plotRight = 560;
@@ -28,10 +30,29 @@ export function ForestPlot({
   const top = 44;
   const height = top + rows.length * rowH + 80;
 
-  const x = (v: number) =>
-    plotLeft + ((Math.log(v) - logMin) / (logMax - logMin)) * (plotRight - plotLeft);
+  // Scale in log space for ratios, linear space for continuous measures.
+  const project = ratio ? Math.log : (v: number) => v;
+  let min: number;
+  let max: number;
+  if (ratio) {
+    min = Math.min(...lows, 0.5);
+    max = Math.max(...highs, 2);
+  } else {
+    const span = Math.max(...highs.map(Math.abs), ...lows.map(Math.abs), 1);
+    min = Math.min(...lows, -span);
+    max = Math.max(...highs, span);
+  }
+  const sMin = project(min);
+  const sMax = project(max);
 
-  const ticks = [0.5, 0.7, 1, 1.5, 2].filter((t) => t >= min && t <= max);
+  const x = (v: number) =>
+    plotLeft + ((project(v) - sMin) / (sMax - sMin)) * (plotRight - plotLeft);
+
+  const ticks = ratio
+    ? [0.5, 0.7, 1, 1.5, 2].filter((t) => t >= min && t <= max)
+    : [min, (min + nul) / 2, nul, (nul + max) / 2, max].map(
+        (t) => Math.round(t * 100) / 100
+      );
 
   return (
     <svg
@@ -48,8 +69,8 @@ export function ForestPlot({
         {measure} [95% CI]
       </text>
 
-      {/* Reference line at no effect (1.0) */}
-      <line x1={x(1)} y1={top - 8} x2={x(1)} y2={top + rows.length * rowH + 8}
+      {/* Reference line at no effect (1 for ratios, 0 for MD/SMD) */}
+      <line x1={x(nul)} y1={top - 8} x2={x(nul)} y2={top + rows.length * rowH + 8}
         stroke="currentColor" className="text-hairline-light" strokeWidth="1" />
 
       {/* Axis ticks */}

@@ -13,10 +13,12 @@ from collections.abc import Sequence
 from .schema import (
     BinaryArm,
     BinaryEffect,
+    ContinuousEffect,
     TrialExtraction,
     ValidationIssue,
     ValidationResult,
 )
+import math
 
 # A reported percentage is a rounded figure; allow half a point of slack.
 _PCT_TOLERANCE = 0.5
@@ -114,4 +116,78 @@ def validate_ratio(extractions: Sequence[TrialExtraction]) -> list[ValidationRes
         results.append(
             ValidationResult(study_id=e.study_id, passed=not issues, issues=issues)
         )
+    return results
+
+
+def _check_continuous(study_id: str, effect: ContinuousEffect) -> list[ValidationIssue]:
+    """Continuous arms need a positive SD, at least one participant, and finite means."""
+    issues: list[ValidationIssue] = []
+    for which, arm in (("treatment", effect.treatment), ("control", effect.control)):
+        if arm.sd <= 0:
+            issues.append(
+                ValidationIssue(
+                    study_id=study_id,
+                    code="non_positive_sd",
+                    message=f"{which} arm SD must be positive (got {arm.sd}).",
+                )
+            )
+        if arm.n < 1:
+            issues.append(
+                ValidationIssue(
+                    study_id=study_id,
+                    code="non_positive_n",
+                    message=f"{which} arm n must be at least 1 (got {arm.n}).",
+                )
+            )
+        if not math.isfinite(arm.mean):
+            issues.append(
+                ValidationIssue(
+                    study_id=study_id,
+                    code="non_finite_mean",
+                    message=f"{which} arm mean is not a finite number.",
+                )
+            )
+    return issues
+
+
+def validate_extractions(
+    extractions: Sequence[TrialExtraction],
+) -> list[ValidationResult]:
+    """Deterministic gate for any extraction, dispatching on which variant it carries.
+
+    A binary (2x2) extraction is checked arm-by-arm like `validate_binary`; a
+    continuous (mean/SD/n) extraction gets `_check_continuous`; everything else
+    is a ratio-with-CI and falls to `validate_ratio`. A trial is never pooled
+    until it passes here.
+    """
+    results: list[ValidationResult] = []
+    for e in extractions:
+        if e.flagged:
+            results.append(
+                ValidationResult(
+                    study_id=e.study_id,
+                    passed=False,
+                    issues=[
+                        ValidationIssue(
+                            study_id=e.study_id,
+                            code="not_extracted",
+                            message=e.flag_reason or "No usable effect estimate extracted.",
+                        )
+                    ],
+                )
+            )
+        elif e.binary is not None:
+            issues = _check_arm(e.study_id, e.binary.treatment, "treatment") + _check_arm(
+                e.study_id, e.binary.control, "control"
+            )
+            results.append(
+                ValidationResult(study_id=e.study_id, passed=not issues, issues=issues)
+            )
+        elif e.continuous is not None:
+            issues = _check_continuous(e.study_id, e.continuous)
+            results.append(
+                ValidationResult(study_id=e.study_id, passed=not issues, issues=issues)
+            )
+        else:
+            results.extend(validate_ratio([e]))
     return results

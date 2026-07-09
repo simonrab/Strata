@@ -251,3 +251,37 @@ def test_decision_endpoint_flags_trial_and_repools(store):
     # Decision persisted + a new snapshot version created (the audit trail).
     assert any(d.study_id == target for d in store.load_decisions("glp1-mace"))
     assert store.list_versions("glp1-mace") == [1, 2]
+
+
+def test_diversity_decision_endpoint_lifts_gate_and_pools(store):
+    from livemeta.core.pipeline import run_review_collect
+    from livemeta.core.schema import DiversityAssessment
+
+    # A review withheld at the homogeneity gate: no pool, diversity requires
+    # confirmation. Confirming it must pool the same extractions.
+    withheld = run_review_collect(
+        demo.GLP1_MACE_QUESTION.model_copy(
+            update={"trial_ids": ["NCT01179048", "NCT01720446"]}
+        ),
+        _fixture_fetch(),
+    )
+    withheld.pool = None
+    withheld.diversity = DiversityAssessment(
+        i2=85.0, i2_band="substantial", requires_confirmation=True
+    )
+    store.save_snapshot(withheld)
+
+    r = client.post(
+        "/api/reviews/glp1-mace/diversity/decision",
+        json={"reason": "clinically combinable"},
+    )
+    assert r.status_code == 200
+    body = r.json()
+    assert body["pool"] is not None
+    assert body["diversity"]["confirmed"] is True
+    assert store.list_versions("glp1-mace") == [1, 2]
+
+
+def test_diversity_decision_endpoint_404_when_no_review(store):
+    r = client.post("/api/reviews/nope/diversity/decision", json={"reason": "x"})
+    assert r.status_code == 404

@@ -10,13 +10,55 @@ from pathlib import Path
 
 from livemeta.core import demo
 from livemeta.core.pipeline import repool_with_decisions, run_review_collect
-from livemeta.core.schema import ReviewDecision
+from livemeta.core.schema import EffectMeasure, PICO, PoolMethod, Question, ReviewDecision
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
 
 def _fetch(nct: str) -> dict:
     return json.loads((FIXTURES / f"{nct}.json").read_text())
+
+
+def _continuous_question(specs: dict[str, tuple]) -> tuple[Question, callable]:
+    """A measure=MD question plus a fetch serving CT.gov-shaped continuous results.
+
+    `specs` maps nct -> (m1, sd1, n1, m2, sd2, n2).
+    """
+    from tests.test_extract import _ctgov_continuous
+
+    question = Question(
+        id="q-continuous",
+        text="Continuous outcome",
+        pico=PICO(population="p", intervention="i", comparator="c", outcome="score"),
+        measure=EffectMeasure.MD,
+        trial_ids=list(specs),
+    )
+
+    def fetch(nct: str) -> dict:
+        return _ctgov_continuous(nct, *specs[nct])
+
+    return question, fetch
+
+
+def _binary_question(specs: dict[str, tuple], measure=EffectMeasure.OR):
+    """A binary question plus a fetch serving CT.gov-shaped 2x2 results.
+
+    `specs` maps nct -> (a, n1, c, n2).
+    """
+    from tests.test_extract import _ctgov_binary
+
+    question = Question(
+        id="q-binary",
+        text="Binary outcome",
+        pico=PICO(population="p", intervention="i", comparator="c", outcome="event"),
+        measure=measure,
+        trial_ids=list(specs),
+    )
+
+    def fetch(nct: str) -> dict:
+        return _ctgov_binary(nct, *specs[nct])
+
+    return question, fetch
 
 
 def _baseline():
@@ -118,3 +160,160 @@ def test_rob_is_scoped_to_pooled_trials_only(monkeypatch):
     # RoB covers exactly the 3 pooled trials — the 2 unpoolable ones are excluded.
     assert len(result.rob) == 3
     assert {r.study_id for r in result.rob} == set(good)
+
+
+# --- Measure-polymorphism: continuous + rare-event end to end ---------------
+
+
+def test_pipeline_pools_continuous_end_to_end(monkeypatch):
+    monkeypatch.setenv("LIVEMETA_STATS_ENGINE", "python")
+    question, fetch = _continuous_question(
+        {
+            "NCT20000001": (10.0, 2.0, 50, 8.0, 2.5, 50),
+            "NCT20000002": (12.0, 3.0, 60, 9.0, 3.0, 60),
+        }
+    )
+    result = run_review_collect(question, fetch)
+
+    assert result.pool is not None
+    assert result.pool.measure == EffectMeasure.MD
+    assert result.pool.k == 2
+    # MD pools on the natural scale — estimate equals its own log field (no exp()).
+    assert result.pool.estimate == result.pool.estimate_log
+    assert 2.0 < result.pool.estimate < 3.0
+    # The extraction carried the continuous variant.
+    assert all(e.continuous is not None for e in result.extractions if not e.flagged)
+
+
+def test_pipeline_routes_rare_binary_to_peto(monkeypatch):
+    monkeypatch.setenv("LIVEMETA_STATS_ENGINE", "python")
+    # Sparse events with a zero cell — the case inverse-variance can't handle.
+    question, fetch = _binary_question(
+        {
+            "NCT30000001": (0, 100, 3, 100),
+            "NCT30000002": (2, 200, 4, 200),
+        },
+        measure=EffectMeasure.OR,
+    )
+    result = run_review_collect(question, fetch)
+
+    assert result.pool is not None
+    assert result.pool.pool_method == PoolMethod.PETO
+    assert result.pool.k == 2
+
+
+def test_pipeline_aggregates_assumptions_from_studies():
+    # The HR demo derives each study's SE from its reported CI — those
+    # conversions must surface on the pooled result's assumptions ledger.
+    review = _baseline()
+    assert review.pool is not None
+    codes = {a.code for a in review.pool.assumptions}
+    assert "log_ratio_se_from_ci" in codes
+    # One assumption per pooled trial (8 in the demo).
+    assert sum(1 for a in review.pool.assumptions if a.code == "log_ratio_se_from_ci") == 8
+
+
+# --- Homogeneity gate -------------------------------------------------------
+
+
+def test_demo_passes_gate_and_still_pools_086(monkeypatch):
+    # The GLP-1 demo is clinically homogeneous and low-heterogeneity (I² ~45%,
+    # "moderate"), so the gate must NOT fire — it pools straight through to 0.86.
+    monkeypatch.setenv("LIVEMETA_STATS_ENGINE", "python")
+    review = _baseline()
+    assert review.pool is not None
+    assert round(review.pool.estimate, 2) == 0.86
+    assert review.diversity is not None
+    assert review.diversity.requires_confirmation is False
+
+
+def test_gate_abstains_until_confirmed(monkeypatch):
+    # A deliberately heterogeneous set (substantial I²) withholds the pool until
+    # a reviewer confirms. The diversity assessment is still populated.
+    monkeypatch.setenv("LIVEMETA_STATS_ENGINE", "python")
+    # HRs that scatter widely -> high I².
+    specs = {
+        "NCT60000001": (0.50, 0.40, 0.62),
+        "NCT60000002": (1.60, 1.30, 1.97),
+        "NCT60000003": (0.70, 0.55, 0.89),
+        "NCT60000004": (1.90, 1.55, 2.33),
+    }
+
+    def fetch(nct):
+        hr, lo, hi = specs[nct]
+        return {
+            "protocolSection": {"identificationModule": {"nctId": nct, "briefTitle": nct}},
+            "resultsSection": {
+                "outcomeMeasuresModule": {
+                    "outcomeMeasures": [
+                        {
+                            "type": "PRIMARY",
+                            "title": "Primary",
+                            "analyses": [
+                                {
+                                    "paramType": "Hazard Ratio",
+                                    "paramValue": str(hr),
+                                    "ciLowerLimit": str(lo),
+                                    "ciUpperLimit": str(hi),
+                                }
+                            ],
+                        }
+                    ]
+                }
+            },
+        }
+
+    question = demo.GLP1_MACE_QUESTION.model_copy(update={"trial_ids": list(specs)})
+    review = run_review_collect(question, fetch)
+
+    assert review.diversity is not None
+    assert review.diversity.requires_confirmation is True
+    assert review.pool is None
+    assert "withheld" in review.summary.lower()
+
+
+def test_repool_after_diversity_confirmation(monkeypatch):
+    from livemeta.core.pipeline import repool_with_diversity
+    from livemeta.core.schema import DiversityDecision
+
+    monkeypatch.setenv("LIVEMETA_STATS_ENGINE", "python")
+    specs = {
+        "NCT60000001": (0.50, 0.40, 0.62),
+        "NCT60000002": (1.60, 1.30, 1.97),
+        "NCT60000003": (0.70, 0.55, 0.89),
+        "NCT60000004": (1.90, 1.55, 2.33),
+    }
+
+    def fetch(nct):
+        hr, lo, hi = specs[nct]
+        return {
+            "protocolSection": {"identificationModule": {"nctId": nct, "briefTitle": nct}},
+            "resultsSection": {
+                "outcomeMeasuresModule": {
+                    "outcomeMeasures": [
+                        {
+                            "type": "PRIMARY",
+                            "title": "Primary",
+                            "analyses": [
+                                {
+                                    "paramType": "Hazard Ratio",
+                                    "paramValue": str(hr),
+                                    "ciLowerLimit": str(lo),
+                                    "ciUpperLimit": str(hi),
+                                }
+                            ],
+                        }
+                    ]
+                }
+            },
+        }
+
+    question = demo.GLP1_MACE_QUESTION.model_copy(update={"trial_ids": list(specs)})
+    withheld = run_review_collect(question, fetch)
+    assert withheld.pool is None
+
+    confirmed = repool_with_diversity(withheld, DiversityDecision(reason="clinically combinable"))
+    assert confirmed.pool is not None
+    assert confirmed.pool.k == 4
+    assert confirmed.diversity is not None
+    assert confirmed.diversity.confirmed is True

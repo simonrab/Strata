@@ -12,6 +12,16 @@ const PICO_FIELDS = [
   ["outcome", "Outcome"],
 ] as const;
 
+// Effect measures the pipeline can pool end to end. Claude picks one when
+// parsing; the user can override before running (e.g. a continuous outcome).
+const MEASURES = [
+  ["HR", "Hazard ratio (time-to-event)"],
+  ["RR", "Risk ratio (binary)"],
+  ["OR", "Odds ratio (binary)"],
+  ["MD", "Mean difference (continuous)"],
+  ["SMD", "Std. mean difference (continuous)"],
+] as const;
+
 export function Ask() {
   const { question, start } = useReview();
   const navigate = useNavigate();
@@ -105,10 +115,26 @@ export function Ask() {
             ))}
           </dl>
 
-          <div className="mt-6 flex items-center gap-4 hairline-t pt-4">
+          <div className="mt-6 flex flex-wrap items-center gap-4 hairline-t pt-4">
             <span className="font-mono text-[13px] text-ink-muted-light">
-              {parsed.trial_ids.length} candidate trials · pooling {parsed.measure}
+              {parsed.trial_ids.length} candidate trials · pooling
             </span>
+            <label className="sr-only" htmlFor="measure-select">
+              Effect measure
+            </label>
+            <select
+              id="measure-select"
+              aria-label="Effect measure"
+              value={parsed.measure}
+              onChange={(e) => setParsed({ ...parsed, measure: e.target.value })}
+              className="rounded-sm hairline bg-surface-container-low px-2 py-1 text-[13px] text-ink-light outline-none focus:border-accent"
+            >
+              {MEASURES.map(([value, label]) => (
+                <option key={value} value={value}>
+                  {value} — {label}
+                </option>
+              ))}
+            </select>
             <button
               onClick={run}
               className="ml-auto inline-flex items-center gap-1.5 rounded-sm bg-ink-light px-5 py-2 text-[13px] font-medium text-canvas-light hover:opacity-90"

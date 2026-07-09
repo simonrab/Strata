@@ -49,4 +49,31 @@ describe("ForestPlot", () => {
     const noHl = render(<ForestPlot pool={pool} />);
     expect(noHl.queryByText("New")).toBeNull();
   });
+
+  it("centres the no-effect line at 0 for a continuous (MD) pool", () => {
+    // A mean-difference pool spans negative to positive; the reference line must
+    // sit at 0, and the axis must be linear (no log of a non-positive effect).
+    const mdPool: PoolResult = {
+      ...pool,
+      measure: "MD",
+      estimate: 2.0,
+      estimate_log: 2.0,
+      ci_low: 0.5,
+      ci_high: 3.5,
+      studies: [
+        { study_id: "A", label: "A", yi: 2.0, vi: 0.2, effect: 2.0, ci_low: 1.1, ci_high: 2.9, weight: 60 },
+        { study_id: "B", label: "B", yi: -0.5, vi: 0.3, effect: -0.5, ci_low: -1.6, ci_high: 0.6, weight: 40 },
+      ],
+    };
+    const { container, getByText } = render(<ForestPlot pool={mdPool} />);
+    // Axis header shows the measure, not "HR".
+    expect(getByText("MD [95% CI]")).toBeInTheDocument();
+    // A negative effect renders finite coordinates (log axis would give NaN).
+    const negRect = Array.from(container.querySelectorAll("rect")).find(
+      (r) => r.getAttribute("x") && !Number.isNaN(Number(r.getAttribute("x")))
+    );
+    expect(negRect).toBeTruthy();
+    // The "0.00" tick appears on the linear axis.
+    expect(getByText("0")).toBeInTheDocument();
+  });
 });

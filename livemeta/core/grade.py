@@ -16,6 +16,7 @@ from pydantic import BaseModel
 
 from .pipeline import interpret_i2, pool_direction, pool_significant
 from .schema import (
+    EggerResult,
     GradeAssessment,
     GradeDomain,
     GradeRating,
@@ -24,6 +25,7 @@ from .schema import (
     RobAssessment,
     RobJudgment,
 )
+from .stats.publication_bias import egger_test
 
 _DEFAULT_MODEL = "claude-haiku-4-5-20251001"
 
@@ -109,6 +111,27 @@ def _imprecision_domain(pool: PoolResult) -> GradeDomain:
     )
 
 
+def _egger_domain(egger: EggerResult) -> GradeDomain:
+    """A deterministic publication-bias domain from Egger's test (k >= 10)."""
+    serious = egger.p is not None and egger.p < 0.10
+    detail = (
+        f"Egger's test across {egger.k} studies: intercept "
+        f"{egger.intercept:.2f}, p = {egger.p:.3f}. "
+    )
+    detail += (
+        "Funnel-plot asymmetry suggests possible small-study effects / publication bias."
+        if serious
+        else "No significant funnel-plot asymmetry detected."
+    )
+    return GradeDomain(
+        name="publication_bias",
+        serious="serious" if serious else "not_serious",
+        downgrade=-1 if serious else 0,
+        rationale=detail,
+        by_claude=False,
+    )
+
+
 def _judged_domains(question: Question, llm_client) -> tuple[GradeDomain, GradeDomain]:
     client = llm_client
     if client is None and os.environ.get("ANTHROPIC_API_KEY"):
@@ -173,7 +196,17 @@ def grade_outcome(
     rob_d = _risk_of_bias_domain(rob)
     incon_d = _inconsistency_domain(pool)
     imprec_d = _imprecision_domain(pool)
-    indir_d, pubbias_d = _judged_domains(question, llm_client)
+    indir_d, claude_pubbias_d = _judged_domains(question, llm_client)
+
+    # Publication bias: quantitative Egger's test when there are enough studies
+    # (Cochrane needs >= 10), otherwise fall back to Claude's qualitative judgment.
+    egger = egger_test(pool.studies)
+    if egger.applicable:
+        pubbias_d = _egger_domain(egger)
+        pub_test = egger
+    else:
+        pubbias_d = claude_pubbias_d
+        pub_test = None
 
     domains = [rob_d, incon_d, indir_d, imprec_d, pubbias_d]
     total = sum(d.downgrade for d in domains)
@@ -202,4 +235,5 @@ def grade_outcome(
         domains=domains,
         sof_line=sof_line,
         footnotes=footnotes,
+        publication_bias_test=pub_test,
     )

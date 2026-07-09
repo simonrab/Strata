@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { getReview, postDecision } from "../lib/api";
 import type { ReviewResult, TrialExtraction } from "../lib/types";
+import { formatEffect } from "../lib/types";
 
 export function ExtractionConfirmation() {
   const { id = "", trialId = "" } = useParams();
@@ -77,13 +78,10 @@ export function ExtractionConfirmation() {
               Primary outcome: {review.question.pico.outcome}
             </div>
             <div className="p-5">
-              {ext.hr != null ? (
+              {formatEffect(ext) != null ? (
                 <div className="flex items-baseline gap-4">
                   <span className="font-mono text-[32px] font-medium text-ink-light">
-                    {ext.measure} {ext.hr.toFixed(2)}
-                  </span>
-                  <span className="font-mono text-[14px] text-ink-muted-light">
-                    95% CI {ext.ci_low?.toFixed(2)}–{ext.ci_high?.toFixed(2)}
+                    {ext.measure} {formatEffect(ext)}
                   </span>
                 </div>
               ) : (

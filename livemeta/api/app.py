@@ -29,6 +29,7 @@ from pydantic import BaseModel
 from ..core import demo, living, llm, pipeline, rob as rob_mod
 from ..core.diff import diff_reviews, status_from_diff
 from ..core.schema import (
+    DiversityDecision,
     Question,
     ReviewDecision,
     ReviewDiff,
@@ -38,6 +39,7 @@ from ..core.schema import (
     SnapshotMeta,
 )
 from ..core.sources.clinicaltrials import ClinicalTrialsClient
+from ..core.sources.router import SourceRouter
 from ..core.store import SnapshotStore, make_store
 
 app = FastAPI(title="LiveMeta", version="0.1.0")
@@ -51,8 +53,12 @@ app.add_middleware(
 
 
 def get_fetch_study():
-    """Injectable ClinicalTrials.gov fetch (overridden in tests)."""
-    return ClinicalTrialsClient().fetch_study
+    """Injectable trial fetch (overridden in tests).
+
+    Defaults to the multi-source router so a review can pull NCT ids from
+    ClinicalTrials.gov and PMID/PMC ids from Europe PMC.
+    """
+    return SourceRouter().fetch
 
 
 def get_store() -> SnapshotStore:
@@ -88,6 +94,10 @@ class RobDecisionRequest(BaseModel):
 
 class UpdateRequest(BaseModel):
     new_trial_id: str
+
+
+class DiversityDecisionRequest(BaseModel):
+    reason: str | None = None
 
 
 def _summary(result: ReviewResult, versions: int, status: str) -> ReviewSummary:
@@ -233,6 +243,24 @@ def record_decision(
     )
     store.save_snapshot(repooled)
     return repooled
+
+
+@app.post("/api/reviews/{question_id}/diversity/decision", response_model=ReviewResult)
+def confirm_diversity(
+    question_id: str,
+    req: DiversityDecisionRequest,
+    store: SnapshotStore = Depends(get_store),
+) -> ReviewResult:
+    """Lift the homogeneity gate: a reviewer confirms clinically diverse trials
+    may be pooled, and the withheld review is re-pooled and snapshotted."""
+    latest = store.load_latest(question_id)
+    if latest is None:
+        raise HTTPException(status_code=404, detail="No such review.")
+    confirmed = pipeline.repool_with_diversity(
+        latest, DiversityDecision(reason=req.reason)
+    )
+    store.save_snapshot(confirmed)
+    return confirmed
 
 
 @app.post("/api/reviews/{question_id}/rob/decision", response_model=ReviewResult)

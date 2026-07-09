@@ -3,9 +3,11 @@ import { Link, useParams } from "react-router-dom";
 import { getReview } from "../lib/api";
 import { Icon } from "../components/Icon";
 import type { ReviewResult, ValidationResult } from "../lib/types";
+import { formatEffect, isRatioMeasure } from "../lib/types";
 import { StatusPill, trialStatus } from "../components/StatusPill";
 import { RobPips } from "../components/RobPips";
 import { ProvenancePopover } from "../components/ProvenancePopover";
+import { HomogeneityGate } from "../components/HomogeneityGate";
 
 function Prisma({ review }: { review: ReviewResult }) {
   const identified = review.question.trial_ids.length;
@@ -82,6 +84,11 @@ export function EvidenceLedger() {
   );
   const robByStudy = new Map(review.rob.map((a) => [a.study_id, a]));
 
+  const measure = review.question.measure;
+  const effectHeader = isRatioMeasure(measure)
+    ? `Effect (${measure} [95% CI])`
+    : `Effect (${measure})`;
+
   return (
     <div className="mx-auto max-w-6xl space-y-6 px-8 py-10">
       <div className="flex items-end justify-between gap-4">
@@ -104,10 +111,20 @@ export function EvidenceLedger() {
 
       <Prisma review={review} />
 
+      {review.diversity &&
+        review.diversity.requires_confirmation &&
+        !review.diversity.confirmed && (
+          <HomogeneityGate
+            reviewId={id}
+            diversity={review.diversity}
+            onConfirmed={setReview}
+          />
+        )}
+
       <section className="overflow-x-auto rounded-md hairline bg-card-light">
         <div className="grid min-w-[720px] grid-cols-12 gap-3 hairline-b bg-surface-container-low p-3 text-label-caps uppercase text-ink-muted-light">
           <div className="col-span-4">Trial</div>
-          <div className="col-span-3">Effect (HR [95% CI])</div>
+          <div className="col-span-3">{effectHeader}</div>
           <div className="col-span-2 text-center">Status</div>
           <div className="col-span-3 text-right">Risk of Bias</div>
         </div>
@@ -130,10 +147,10 @@ export function EvidenceLedger() {
                 <span className="font-mono text-[11px] text-ink-muted-light">{e.study_id}</span>
               </div>
               <div className="col-span-3 flex items-center gap-2">
-                {e.hr != null ? (
+                {formatEffect(e) != null ? (
                   <>
                     <span className="rounded-sm hairline bg-surface-container px-1.5 py-0.5 font-mono text-[13px] text-ink-light">
-                      {e.hr.toFixed(2)} [{e.ci_low?.toFixed(2)}, {e.ci_high?.toFixed(2)}]
+                      {formatEffect(e)}
                     </span>
                     <ProvenancePopover provenance={e.provenance} />
                   </>

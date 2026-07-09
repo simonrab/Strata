@@ -10,6 +10,7 @@ from __future__ import annotations
 import math
 
 from ..schema import (
+    Assumption,
     BinaryEffect,
     ContinuousEffect,
     EffectMeasure,
@@ -65,6 +66,7 @@ def continuous_point(effect: ContinuousEffect, measure: EffectMeasure) -> Effect
     m1, sd1, n1 = effect.treatment.mean, effect.treatment.sd, effect.treatment.n
     m2, sd2, n2 = effect.control.mean, effect.control.sd, effect.control.n
 
+    assumptions: list[Assumption] = []
     if measure is EffectMeasure.MD:
         yi = m1 - m2
         vi = sd1 * sd1 / n1 + sd2 * sd2 / n2
@@ -76,6 +78,16 @@ def continuous_point(effect: ContinuousEffect, measure: EffectMeasure) -> Effect
         j = 1.0 - 3.0 / (4.0 * (n1 + n2) - 9.0)  # Hedges' small-sample correction
         yi = d * j
         vi = (n1 + n2) / (n1 * n2) + yi * yi / (2.0 * (n1 + n2))
+        assumptions.append(
+            Assumption(
+                code="smd_hedges_j",
+                detail=(
+                    f"SMD = Cohen's d × J with the Hedges small-sample correction "
+                    f"J = 1 − 3/(4·{n1 + n2} − 9) = {j:.4f} (Cochrane Handbook 6.5.1.2)."
+                ),
+                study_id=effect.study_id,
+            )
+        )
     else:
         raise ValueError(f"continuous_point does not support measure {measure}")
 
@@ -85,6 +97,7 @@ def continuous_point(effect: ContinuousEffect, measure: EffectMeasure) -> Effect
         yi=yi,
         vi=vi,
         provenance=effect.provenance,
+        assumptions=assumptions,
     )
 
 
@@ -104,10 +117,61 @@ def ratio_ci_point(
         raise ValueError(f"non-positive ratio/CI in {study_id}")
     yi = math.log(ratio)
     se = (math.log(ci_high) - math.log(ci_low)) / (2 * _Z)
+    assumption = Assumption(
+        code="log_ratio_se_from_ci",
+        detail=(
+            f"SE(ln ratio) = (ln {ci_high} − ln {ci_low}) / (2 × 1.95996) = {se:.4f} "
+            f"(Cochrane Handbook 6.5.2.3)."
+        ),
+        study_id=study_id,
+    )
     return EffectPoint(
         study_id=study_id,
         label=label,
         yi=yi,
         vi=se * se,
         provenance=provenance or [],
+        assumptions=[assumption],
     )
+
+
+def sd_from_se(se: float, n: int, study_id: str | None = None) -> tuple[float, Assumption]:
+    """Recover a standard deviation from a reported standard error.
+
+    SD = SE × sqrt(n) (Cochrane Handbook 6.5.2.2). Used when a trial reports an
+    SE (or a CI, via `sd_from_ci`) for an arm mean instead of the SD the
+    continuous effect-size formulas need. Returns the SD and the logged
+    assumption so the caller can attach it to the extraction.
+    """
+    if se < 0 or n < 1:
+        raise ValueError(f"invalid SE/n for SD recovery in {study_id}")
+    sd = se * math.sqrt(n)
+    assumption = Assumption(
+        code="sd_from_se",
+        detail=f"SD = SE × √n = {se} × √{n} = {sd:.4f} (Cochrane Handbook 6.5.2.2).",
+        study_id=study_id,
+    )
+    return sd, assumption
+
+
+def sd_from_ci(
+    ci_low: float, ci_high: float, n: int, study_id: str | None = None
+) -> tuple[float, Assumption]:
+    """Recover a standard deviation from a 95% CI of an arm mean.
+
+    SE = (upper − lower) / (2 × 1.96), then SD = SE × sqrt(n) (Cochrane Handbook
+    6.5.2.2/6.5.2.3). Assumes the CI is a normal-approximation 95% interval.
+    """
+    if n < 1 or ci_high < ci_low:
+        raise ValueError(f"invalid CI/n for SD recovery in {study_id}")
+    se = (ci_high - ci_low) / (2 * _Z)
+    sd = se * math.sqrt(n)
+    assumption = Assumption(
+        code="sd_from_ci",
+        detail=(
+            f"SE = ({ci_high} − {ci_low}) / (2 × 1.95996) = {se:.4f}; "
+            f"SD = SE × √{n} = {sd:.4f} (Cochrane Handbook 6.5.2.2)."
+        ),
+        study_id=study_id,
+    )
+    return sd, assumption

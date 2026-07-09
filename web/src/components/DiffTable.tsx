@@ -1,5 +1,6 @@
 import { Icon } from "./Icon";
 import type { ReviewDiff, ReviewResult } from "../lib/types";
+import { excludesNull, nullEffect } from "../lib/types";
 
 function fmt(n: number | null | undefined): string {
   return n == null ? "—" : n.toFixed(2);
@@ -48,8 +49,10 @@ export function DiffTable({
   ];
 
   const pool = current?.pool;
-  const significant = pool ? pool.ci_high < 1 || pool.ci_low > 1 : false;
-  const reduced = pool ? pool.estimate < 1 : false;
+  const significant = pool
+    ? excludesNull(pool.measure, pool.ci_low, pool.ci_high)
+    : false;
+  const reduced = pool ? pool.estimate < nullEffect(pool.measure) : false;
   const verdict = diff.conclusion_changed
     ? "Conclusion moved."
     : !pool

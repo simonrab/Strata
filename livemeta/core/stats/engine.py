@@ -71,7 +71,11 @@ def pool(
 
     engine_name, backend = _select_engine()
     fit = backend.fit(points, method=method)
-    return _build_result(fit, measure=measure, method=method, engine=engine_name)
+    result = _build_result(fit, measure=measure, method=method, engine=engine_name)
+    # Surface every per-study data conversion (SE from CI, SMD Hedges' J, SD
+    # recovery) on the pooled result so the audit trail can show them.
+    result.assumptions = [a for p in points for a in p.assumptions]
+    return result
 
 
 def _build_result(fit: dict, *, measure: EffectMeasure, method: str, engine: str) -> PoolResult:

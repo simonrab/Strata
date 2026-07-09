@@ -29,7 +29,9 @@ describe("ExtractionConfirmation", () => {
     vi.mocked(getReview).mockResolvedValue(reviewFixture);
     renderAt("NCT01179048");
 
-    expect(await screen.findByText("HR 0.87")).toBeInTheDocument();
+    expect(
+      await screen.findByText("HR 0.87 [0.78, 0.97]")
+    ).toBeInTheDocument();
     expect(screen.getByText(/Primary outcome: HR 0.87/)).toBeInTheDocument();
   });
 
@@ -38,7 +40,7 @@ describe("ExtractionConfirmation", () => {
     vi.mocked(postDecision).mockResolvedValue(reviewFixture);
     renderAt("NCT01179048");
 
-    await screen.findByText("HR 0.87");
+    await screen.findByText("HR 0.87 [0.78, 0.97]");
     await userEvent.click(screen.getByRole("button", { name: /Flag for review/i }));
 
     expect(postDecision).toHaveBeenCalledWith("glp1-mace", {

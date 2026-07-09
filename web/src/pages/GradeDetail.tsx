@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { getReview } from "../lib/api";
 import { Icon } from "../components/Icon";
+import { FunnelPlot } from "../components/FunnelPlot";
 import type { GradeRating, ReviewResult } from "../lib/types";
 
 const CERTAINTY_DOTS: Record<GradeRating, number> = {
@@ -177,6 +178,19 @@ export function GradeDetail() {
           })}
         </div>
       </div>
+
+      {/* Funnel plot — quantitative publication-bias check (>= 10 studies) */}
+      {grade.publication_bias_test?.applicable && pool.studies.length > 0 && (
+        <div>
+          <h2 className="mb-4 flex items-center gap-2 text-[13px] font-medium text-ink-light">
+            <Icon name="scatter_plot" size={18} className="text-accent" />
+            Funnel plot — small-study effects
+          </h2>
+          <div className="max-w-xl rounded-md hairline bg-card-light p-5">
+            <FunnelPlot pool={pool} egger={grade.publication_bias_test} />
+          </div>
+        </div>
+      )}
 
       {grade.footnotes.length > 0 && (
         <div className="max-w-4xl hairline-t pt-4">

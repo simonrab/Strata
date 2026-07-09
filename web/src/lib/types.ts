@@ -18,6 +18,40 @@ export interface StudyResult {
   weight: number;
 }
 
+export interface Assumption {
+  code: string;
+  detail: string;
+  study_id?: string | null;
+}
+
+export interface BinaryArm {
+  events: number;
+  total: number;
+  reported_pct?: number | null;
+}
+
+export interface BinaryEffect {
+  study_id: string;
+  label: string;
+  treatment: BinaryArm;
+  control: BinaryArm;
+  provenance: Provenance[];
+}
+
+export interface ContinuousArm {
+  mean: number;
+  sd: number;
+  n: number;
+}
+
+export interface ContinuousEffect {
+  study_id: string;
+  label: string;
+  treatment: ContinuousArm;
+  control: ContinuousArm;
+  provenance: Provenance[];
+}
+
 export interface PoolResult {
   measure: string;
   model: string;
@@ -39,6 +73,25 @@ export interface PoolResult {
   prediction_high: number | null;
   studies: StudyResult[];
   notes: string[];
+  assumptions?: Assumption[];
+}
+
+// Ratio measures pool on the log scale (null effect = 1); MD/SMD are natural
+// (null effect = 0). Mirrors livemeta.core.schema.RATIO_MEASURES.
+export const RATIO_MEASURES = ["RR", "OR", "HR"];
+
+export function isRatioMeasure(measure: string): boolean {
+  return RATIO_MEASURES.includes(measure);
+}
+
+export function nullEffect(measure: string): number {
+  return isRatioMeasure(measure) ? 1 : 0;
+}
+
+// Whether a CI excludes the null effect for this measure.
+export function excludesNull(measure: string, ciLow: number, ciHigh: number): boolean {
+  const n = nullEffect(measure);
+  return ciHigh < n || ciLow > n;
 }
 
 export interface TrialExtraction {
@@ -48,10 +101,31 @@ export interface TrialExtraction {
   hr: number | null;
   ci_low: number | null;
   ci_high: number | null;
+  binary?: BinaryEffect | null;
+  continuous?: ContinuousEffect | null;
   flagged: boolean;
   flag_reason: string | null;
   confirmed: boolean;
   provenance: Provenance[];
+  assumptions?: Assumption[];
+}
+
+// A compact effect string per extraction variant, matching the backend's
+// _effect_summary: ratio → "0.86 [0.79, 0.94]"; binary → "12/500 vs 20/500";
+// continuous → the point estimate.
+export function formatEffect(e: TrialExtraction): string | null {
+  if (e.binary) {
+    const { treatment: t, control: c } = e.binary;
+    return `${t.events}/${t.total} vs ${c.events}/${c.total}`;
+  }
+  if (e.continuous) {
+    const { treatment: t, control: c } = e.continuous;
+    return `${t.mean} vs ${c.mean}`;
+  }
+  if (e.hr != null) {
+    return `${e.hr.toFixed(2)} [${e.ci_low?.toFixed(2)}, ${e.ci_high?.toFixed(2)}]`;
+  }
+  return null;
 }
 
 export interface ReviewDecision {
@@ -90,6 +164,15 @@ export interface GradeDomain {
   by_claude: boolean;
 }
 
+export interface EggerResult {
+  k: number;
+  intercept: number | null;
+  se_intercept: number | null;
+  t: number | null;
+  p: number | null;
+  applicable: boolean;
+}
+
 export interface GradeAssessment {
   outcome: string;
   starting_level: GradeRating;
@@ -97,6 +180,23 @@ export interface GradeAssessment {
   domains: GradeDomain[];
   sof_line: string;
   footnotes: string[];
+  publication_bias_test?: EggerResult | null;
+}
+
+export interface DiversityDomain {
+  key: string;
+  judgment: "similar" | "mixed" | "divergent" | "not_assessed";
+  rationale: string;
+  by_claude: boolean;
+}
+
+export interface DiversityAssessment {
+  domains: DiversityDomain[];
+  i2: number | null;
+  i2_band: string;
+  requires_confirmation: boolean;
+  confirmed: boolean;
+  rationale: string;
 }
 
 export interface LeaveOneOutRow {
@@ -151,6 +251,7 @@ export interface ReviewResult {
   rob: RobAssessment[];
   grade: GradeAssessment | null;
   sensitivity: LeaveOneOutRow[];
+  diversity?: DiversityAssessment | null;
 }
 
 export interface PipelineEvent {

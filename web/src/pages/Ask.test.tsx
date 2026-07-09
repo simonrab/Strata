@@ -50,7 +50,9 @@ describe("Ask (dynamic PICO)", () => {
     // PICO fields become editable inputs prefilled from the parse.
     expect(await screen.findByLabelText("Intervention")).toHaveValue("ACE inhibitor");
     expect(screen.getByLabelText("Outcome")).toHaveValue("Stroke");
-    expect(screen.getByText(/2 candidate trials · pooling RR/)).toBeInTheDocument();
+    expect(screen.getByText(/2 candidate trials · pooling/)).toBeInTheDocument();
+    // The parsed measure is preselected in the (now editable) measure dropdown.
+    expect(screen.getByLabelText("Effect measure")).toHaveValue("RR");
     expect(screen.getByRole("button", { name: /Run review/i })).toBeInTheDocument();
   });
 

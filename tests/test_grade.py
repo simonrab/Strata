@@ -148,6 +148,73 @@ def test_claude_indirectness_downgrade_is_recorded():
     assert g.sof_line
 
 
+def _pool_with_studies(n, *, asymmetric=False):
+    """A pool carrying n per-study rows, for the Egger publication-bias path."""
+    import math
+
+    from livemeta.core.schema import StudyResult
+
+    studies = []
+    for i in range(n):
+        vi = 0.01 + 0.05 * i
+        yi = (0.10 + 2.5 * vi) if asymmetric else (-0.15 + (0.05 if i % 2 else -0.05))
+        studies.append(
+            StudyResult(
+                study_id=f"S{i}",
+                label=f"S{i}",
+                yi=yi,
+                vi=vi,
+                effect=math.exp(yi),
+                ci_low=math.exp(yi - 1.96 * math.sqrt(vi)),
+                ci_high=math.exp(yi + 1.96 * math.sqrt(vi)),
+                weight=100.0 / n,
+            )
+        )
+    pool = _pool(0.86, 0.79, 0.94, i2=30.0)
+    return pool.model_copy(update={"k": n, "studies": studies})
+
+
+def test_pub_bias_deterministic_when_k_ge_10():
+    # 10+ studies -> Egger runs; the publication-bias domain becomes deterministic
+    # (not Claude-judged) and the Egger result is attached for the funnel plot.
+    g = grade.grade_outcome(
+        _question(),
+        _pool_with_studies(12, asymmetric=False),
+        [_rob(RobJudgment.LOW)] * 12,
+        llm_client=None,
+    )
+    by_name = {d.name: d for d in g.domains}
+    assert by_name["publication_bias"].by_claude is False
+    assert g.publication_bias_test is not None
+    assert g.publication_bias_test.applicable is True
+
+
+def test_pub_bias_deterministic_flags_asymmetry():
+    g = grade.grade_outcome(
+        _question(),
+        _pool_with_studies(12, asymmetric=True),
+        [_rob(RobJudgment.LOW)] * 12,
+        llm_client=None,
+    )
+    by_name = {d.name: d for d in g.domains}
+    assert by_name["publication_bias"].by_claude is False
+    assert by_name["publication_bias"].downgrade == -1
+
+
+def test_pub_bias_falls_back_to_claude_below_10():
+    # The 8-study demo pool is below the Egger threshold, so publication bias stays
+    # Claude-judged exactly as before — no Egger result.
+    g = grade.grade_outcome(
+        _question(),
+        _pool(0.86, 0.79, 0.94, i2=47.0),
+        [_rob(RobJudgment.LOW)] * 8,
+        llm_client=None,
+    )
+    by_name = {d.name: d for d in g.domains}
+    assert by_name["publication_bias"].by_claude is True
+    assert g.publication_bias_test is None or g.publication_bias_test.applicable is False
+
+
 def test_pending_rob_does_not_downgrade_but_is_noted():
     g = grade.grade_outcome(
         _question(),

@@ -49,6 +49,21 @@ class Provenance(BaseModel):
     field: str | None = None
 
 
+class Assumption(BaseModel):
+    """A Cochrane data conversion the code ran, logged for the audit trail.
+
+    Effect-size calculation sometimes has to convert reported statistics (a CI
+    into a standard error, an SE into an SD, apply a small-sample correction).
+    The conversions are standard Handbook formulas run in code — this records
+    each one so a reviewer can see exactly which formula produced a pooled
+    number, rather than trusting an opaque transform.
+    """
+
+    code: str  # e.g. "log_ratio_se_from_ci" | "smd_hedges_j" | "sd_from_se"
+    detail: str  # human-readable, includes the applied formula
+    study_id: str | None = None
+
+
 class BinaryArm(BaseModel):
     events: int
     total: int
@@ -123,10 +138,18 @@ class EffectPoint(BaseModel):
     yi: float
     vi: float
     provenance: list[Provenance] = Field(default_factory=list)
+    assumptions: list[Assumption] = Field(default_factory=list)
 
 
 class TrialExtraction(BaseModel):
-    """A trial's extracted effect with provenance, or a flag for review."""
+    """A trial's extracted effect with provenance, or a flag for review.
+
+    Measure-polymorphic: `hr/ci_low/ci_high` carry a ratio reported with a CI
+    (the HR/RR/OR-as-ratio variant); `binary` carries a 2x2 table; `continuous`
+    carries mean/SD/n per arm. Whichever variant applies, `point` is the common
+    pooling currency the stats engine consumes. The ratio fields keep their
+    historical names so existing snapshots and the frontend stay compatible.
+    """
 
     study_id: str  # e.g. NCT id
     label: str
@@ -134,11 +157,14 @@ class TrialExtraction(BaseModel):
     hr: float | None = None
     ci_low: float | None = None
     ci_high: float | None = None
+    binary: BinaryEffect | None = None  # 2x2 variant (RR/OR from event counts)
+    continuous: ContinuousEffect | None = None  # mean/SD/n variant (MD/SMD)
     point: EffectPoint | None = None
     flagged: bool = False
     flag_reason: str | None = None
     confirmed: bool = False  # a human reviewer signed off on this extraction
     provenance: list[Provenance] = Field(default_factory=list)
+    assumptions: list[Assumption] = Field(default_factory=list)
 
 
 class ReviewDecision(BaseModel):
@@ -151,6 +177,40 @@ class ReviewDecision(BaseModel):
 
     study_id: str
     decision: str  # "confirmed" | "flagged"
+    reason: str | None = None
+    timestamp: str | None = None
+
+
+class DiversityDomain(BaseModel):
+    """One PICO domain's clinical-diversity judgment across the pooled trials."""
+
+    key: str  # population | intervention | comparator | outcome
+    judgment: str = "not_assessed"  # similar | mixed | divergent | not_assessed
+    rationale: str = ""
+    by_claude: bool = True
+
+
+class DiversityAssessment(BaseModel):
+    """The homogeneity gate: is this set similar enough to pool?
+
+    Combines Claude's clinical-diversity read across the four PICO domains with
+    the deterministic statistical-heterogeneity band (I²). `requires_confirmation`
+    is the load-bearing flag — when true, the pipeline withholds the pooled
+    estimate until a human confirms the trials are clinically combinable.
+    """
+
+    domains: list[DiversityDomain] = Field(default_factory=list)
+    i2: float | None = None
+    i2_band: str = ""
+    requires_confirmation: bool = False
+    confirmed: bool = False
+    rationale: str = ""
+
+
+class DiversityDecision(BaseModel):
+    """A human reviewer's sign-off that clinically diverse trials may be pooled."""
+
+    decision: str = "confirmed"
     reason: str | None = None
     timestamp: str | None = None
 
@@ -212,6 +272,22 @@ class GradeDomain(BaseModel):
     by_claude: bool = False  # True for the judged domains (indirectness, publication bias)
 
 
+class EggerResult(BaseModel):
+    """Egger's regression test for funnel-plot asymmetry (small-study effects).
+
+    Only meaningful with at least 10 studies (Cochrane Handbook 13.3.5.3); below
+    that `applicable` is False and GRADE keeps the qualitative judgment. The
+    intercept measures asymmetry, tested at p < 0.10.
+    """
+
+    k: int
+    intercept: float | None = None
+    se_intercept: float | None = None
+    t: float | None = None
+    p: float | None = None
+    applicable: bool = False
+
+
 class GradeAssessment(BaseModel):
     """Certainty of evidence for one outcome, with a Summary-of-Findings line."""
 
@@ -221,6 +297,7 @@ class GradeAssessment(BaseModel):
     domains: list[GradeDomain] = Field(default_factory=list)
     sof_line: str = ""
     footnotes: list[str] = Field(default_factory=list)
+    publication_bias_test: EggerResult | None = None
 
 
 class LeaveOneOutRow(BaseModel):
@@ -278,6 +355,9 @@ class PoolResult(BaseModel):
 
     studies: list[StudyResult] = Field(default_factory=list)
     notes: list[str] = Field(default_factory=list)
+    # Data conversions applied to the pooled studies (SE from CI, SMD Hedges' J,
+    # SD from SE/CI). Kept distinct from `notes`, which are interpretive caveats.
+    assumptions: list[Assumption] = Field(default_factory=list)
 
 
 class PipelineEvent(BaseModel):
@@ -299,6 +379,7 @@ class ReviewResult(BaseModel):
     rob: list[RobAssessment] = Field(default_factory=list)
     grade: GradeAssessment | None = None
     sensitivity: list[LeaveOneOutRow] = Field(default_factory=list)
+    diversity: DiversityAssessment | None = None
 
 
 class TrialCandidate(BaseModel):

@@ -2,6 +2,7 @@ import { ForestPlot } from "./ForestPlot";
 import { ProvenancePopover } from "./ProvenancePopover";
 import { Icon } from "./Icon";
 import type { GradeRating, ReviewResult } from "../lib/types";
+import { excludesNull, formatEffect } from "../lib/types";
 
 function i2Band(i2: number): string {
   if (i2 <= 40) return "might not be important";
@@ -29,7 +30,7 @@ export function ReportView({ result }: { result: ReviewResult }) {
     );
   }
   const { pool, summary, extractions, grade, sensitivity } = result;
-  const significant = pool.ci_high < 1 || pool.ci_low > 1;
+  const significant = excludesNull(pool.measure, pool.ci_low, pool.ci_high);
   const certainty = grade ? CERTAINTY[grade.certainty] : null;
 
   return (
@@ -103,6 +104,28 @@ export function ReportView({ result }: { result: ReviewResult }) {
           )}
         </section>
 
+        {/* Assumptions & conversions — the audit trail for every data conversion */}
+        {(pool.assumptions?.length ?? 0) > 0 && (
+          <section className="rounded-md hairline bg-card-light p-6">
+            <h2 className="mb-1 text-[13px] font-medium text-ink-light">
+              Assumptions &amp; conversions
+            </h2>
+            <p className="mb-4 text-[12px] text-ink-muted-light">
+              Every Cochrane conversion the code ran to reach a poolable effect.
+            </p>
+            <ul className="flex flex-col gap-2">
+              {(pool.assumptions ?? []).map((a, i) => (
+                <li key={i} className="flex gap-2 font-mono text-[12px] text-ink-muted-light">
+                  <span className="shrink-0 rounded-sm hairline bg-surface-container px-1.5 py-0.5 text-[10px] uppercase text-ink-light">
+                    {a.study_id ?? "—"}
+                  </span>
+                  <span>{a.detail}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
         {/* Leave-one-out sensitivity */}
         {sensitivity.length > 0 && (
           <section className="rounded-md hairline bg-card-light p-6">
@@ -124,7 +147,7 @@ export function ReportView({ result }: { result: ReviewResult }) {
                 </thead>
                 <tbody>
                   {sensitivity.map((r) => {
-                    const rowSig = r.ci_high < 1 || r.ci_low > 1;
+                    const rowSig = excludesNull(pool.measure, r.ci_low, r.ci_high);
                     const flips = rowSig !== significant;
                     return (
                       <tr key={r.omitted_study_id} className="hairline-t">
@@ -187,7 +210,7 @@ export function ReportView({ result }: { result: ReviewResult }) {
                   <div className="flex justify-between gap-2">
                     <dt className="text-ink-muted-light">Effect</dt>
                     <dd className="text-ink-light">
-                      {e.flagged ? "flagged" : `${e.measure} ${e.hr}`}
+                      {e.flagged ? "flagged" : `${e.measure} ${formatEffect(e) ?? ""}`}
                     </dd>
                   </div>
                 </dl>

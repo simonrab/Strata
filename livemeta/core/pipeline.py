@@ -11,7 +11,9 @@ from collections.abc import Callable, Iterator, Sequence
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from .schema import (
+    BinaryEffect,
     EffectMeasure,
+    EffectPoint,
     GradeAssessment,
     LeaveOneOutRow,
     PipelineEvent,
@@ -23,7 +25,7 @@ from .schema import (
     RobAssessment,
     TrialExtraction,
 )
-from .sources.clinicaltrials import ClinicalTrialsClient
+from .sources.router import SourceRouter
 from .stats import engine as stats_engine
 from .stats import sensitivity as sensitivity_mod
 from . import extract as extract_mod
@@ -53,6 +55,38 @@ def _failed_extraction(nct: str, exc: Exception) -> TrialExtraction:
             Provenance(trial_id=nct, snippet="", source_url=f"https://clinicaltrials.gov/study/{nct}")
         ],
     )
+
+
+def _effect_summary(ext: TrialExtraction) -> str:
+    """A human-readable one-liner for an extraction, per its variant.
+
+    Ratio (HR/RR/OR reported as ratio+CI) → `HR 0.86 (0.79-0.94)`; binary 2x2 →
+    `12/500 vs 20/500`; continuous → `MD 2.00`.
+    """
+    if ext.binary is not None:
+        b = ext.binary
+        return f"{b.treatment.events}/{b.treatment.total} vs {b.control.events}/{b.control.total}"
+    if ext.continuous is not None and ext.point is not None:
+        return f"{ext.measure.value} {ext.point.yi:.2f}"
+    if ext.hr is not None:
+        return f"{ext.measure.value} {ext.hr} ({ext.ci_low}-{ext.ci_high})"
+    return ext.measure.value
+
+
+def _pool_inputs(
+    extractions: Sequence[TrialExtraction], passed_ids: set[str]
+) -> list[BinaryEffect | EffectPoint]:
+    """The pooling inputs for the trials that passed validation.
+
+    Binary variants are handed to the engine as `BinaryEffect` so it can route a
+    sparse 2x2 table to Peto; everything else contributes its pre-computed
+    `EffectPoint`. A review has a single measure, so these never mix within one
+    pool (the engine's rare-event route requires all-binary inputs).
+    """
+    passed = [e for e in extractions if e.study_id in passed_ids]
+    if passed and all(e.binary is not None for e in passed):
+        return [e.binary for e in passed]
+    return [e.point for e in passed if e.point]
 
 
 def interpret_i2(i2: float) -> str:
@@ -135,7 +169,7 @@ def run_review(
     fetch_study: FetchStudy | None = None,
     llm_client=None,
 ) -> Iterator[PipelineEvent]:
-    fetch_study = fetch_study or ClinicalTrialsClient().fetch_study
+    fetch_study = fetch_study or SourceRouter().fetch
 
     yield PipelineEvent(
         stage="parse",
@@ -170,12 +204,12 @@ def run_review(
                 ext = _failed_extraction(nct, err)
             else:
                 studies_by_id[nct] = study
-                ext = extract_mod.extract_hr(study)
+                ext = extract_mod.extract_any(study, question.measure, llm_client=llm_client)
             extractions_by_id[nct] = ext
             msg = (
                 f"{ext.label}: flagged for review ({ext.flag_reason})"
                 if ext.flagged
-                else f"{ext.label}: {ext.measure.value} {ext.hr} ({ext.ci_low}-{ext.ci_high})"
+                else f"{ext.label}: {_effect_summary(ext)}"
             )
             yield PipelineEvent(stage="extract", message=msg, data=ext.model_dump())
 
@@ -183,7 +217,7 @@ def run_review(
         extractions_by_id[nct] for nct in question.trial_ids if nct in extractions_by_id
     ]
 
-    validations = validate_mod.validate_ratio(extractions)
+    validations = validate_mod.validate_extractions(extractions)
     passed_ids = {v.study_id for v in validations if v.passed}
     n_flagged = len(validations) - len(passed_ids)
     yield PipelineEvent(
@@ -192,10 +226,12 @@ def run_review(
         data={"validations": [v.model_dump() for v in validations]},
     )
 
-    points = [e.point for e in extractions if e.study_id in passed_ids and e.point]
-    pool = stats_engine.pool(points, measure=question.measure) if len(points) >= 2 else None
+    inputs = _pool_inputs(extractions, passed_ids)
+    provisional = (
+        stats_engine.pool(inputs, measure=question.measure) if len(inputs) >= 2 else None
+    )
 
-    if pool is None:
+    if provisional is None:
         yield PipelineEvent(
             stage="done",
             message="Too few valid trials to pool — abstaining.",
@@ -205,6 +241,39 @@ def run_review(
         )
         return
 
+    # Homogeneity gate (mandatory): judge clinical diversity + statistical
+    # heterogeneity before committing the pool. `homogeneity` is imported here to
+    # avoid an import cycle (it reuses interpret_i2 from this module).
+    from . import homogeneity as homogeneity_mod
+
+    pooled_studies = [
+        studies_by_id[p.study_id] for p in inputs if p.study_id in studies_by_id
+    ]
+    diversity = homogeneity_mod.assess_diversity(
+        question, extractions, pooled_studies, provisional, llm_client=llm_client
+    )
+    yield PipelineEvent(
+        stage="diversity",
+        message=diversity.rationale,
+        data=diversity.model_dump(),
+    )
+
+    if diversity.requires_confirmation and not diversity.confirmed:
+        summary = "Pooling withheld pending homogeneity confirmation."
+        yield PipelineEvent(
+            stage="done",
+            message=summary,
+            data=ReviewResult(
+                question=question,
+                extractions=extractions,
+                validations=validations,
+                summary=summary,
+                diversity=diversity,
+            ).model_dump(),
+        )
+        return
+
+    pool = provisional
     summary = summarize(question, pool)
     yield PipelineEvent(
         stage="pool",
@@ -214,11 +283,8 @@ def run_review(
     )
 
     # Appraise only the trials that actually made the pool, in pool order.
-    pooled_studies = [
-        studies_by_id[p.study_id] for p in points if p.study_id in studies_by_id
-    ]
     rob, grade, sensitivity = _appraise(
-        question, pooled_studies, points, pool, llm_client=llm_client
+        question, pooled_studies, inputs, pool, llm_client=llm_client
     )
     n_pending = sum(1 for r in rob if r.overall.value == "pending")
     yield PipelineEvent(
@@ -252,16 +318,17 @@ def run_review(
             rob=rob,
             grade=grade,
             sensitivity=sensitivity,
+            diversity=diversity,
         ).model_dump(),
     )
 
 
 def run_review_collect(
-    question: Question, fetch_study: FetchStudy | None = None
+    question: Question, fetch_study: FetchStudy | None = None, llm_client=None
 ) -> ReviewResult:
     """Drain the pipeline and return the final ReviewResult."""
     result = ReviewResult(question=question)
-    for event in run_review(question, fetch_study):
+    for event in run_review(question, fetch_study, llm_client=llm_client):
         if event.stage == "done" and event.data is not None:
             result = ReviewResult.model_validate(event.data)
     return result
@@ -294,13 +361,13 @@ def repool_with_decisions(
                 ext.flag_reason = None
         extractions.append(ext)
 
-    validations = validate_mod.validate_ratio(extractions)
+    validations = validate_mod.validate_extractions(extractions)
     passed_ids = {v.study_id for v in validations if v.passed}
-    points = [e.point for e in extractions if e.study_id in passed_ids and e.point]
+    inputs = _pool_inputs(extractions, passed_ids)
 
     pool = (
-        stats_engine.pool(points, measure=result.question.measure)
-        if len(points) >= 2
+        stats_engine.pool(inputs, measure=result.question.measure)
+        if len(inputs) >= 2
         else None
     )
     summary = (
@@ -318,7 +385,7 @@ def repool_with_decisions(
         from . import grade as grade_mod
 
         grade = grade_mod.grade_outcome(result.question, pool, rob)
-        loo = sensitivity_mod.leave_one_out(points, measure=result.question.measure)
+        loo = sensitivity_mod.leave_one_out(inputs, measure=result.question.measure)
 
     return ReviewResult(
         question=result.question,
@@ -329,4 +396,67 @@ def repool_with_decisions(
         rob=rob,
         grade=grade,
         sensitivity=loo,
+        diversity=result.diversity,
+    )
+
+
+def repool_with_diversity(result: ReviewResult, decision) -> ReviewResult:
+    """Pool a review that was withheld at the homogeneity gate, once a human
+    confirms the clinically diverse trials may be combined.
+
+    The reviewer's sign-off flips `diversity.confirmed`; the pool, grade, and
+    leave-one-out are then computed from the same validated extractions. The
+    model never edits numbers — confirmation only lifts the gate. RoB is not
+    re-derived here (it needs the source records); the living-layer update path
+    re-runs the full appraisal.
+    """
+    from .schema import DiversityAssessment
+
+    extractions = [e.model_copy(deep=True) for e in result.extractions]
+    validations = validate_mod.validate_extractions(extractions)
+    passed_ids = {v.study_id for v in validations if v.passed}
+    inputs = _pool_inputs(extractions, passed_ids)
+
+    pool = (
+        stats_engine.pool(inputs, measure=result.question.measure)
+        if len(inputs) >= 2
+        else None
+    )
+
+    diversity = (result.diversity or DiversityAssessment()).model_copy(
+        update={
+            "confirmed": True,
+            "rationale": (
+                (result.diversity.rationale + " " if result.diversity else "")
+                + "Confirmed by a reviewer: trials judged clinically combinable."
+            ),
+        }
+    )
+
+    if pool is None:
+        return ReviewResult(
+            question=result.question,
+            extractions=extractions,
+            validations=validations,
+            summary="Too few valid trials to pool — abstaining.",
+            diversity=diversity,
+        )
+
+    summary = summarize(result.question, pool)
+    from . import grade as grade_mod
+
+    rob = [r.model_copy(deep=True) for r in result.rob]
+    grade = grade_mod.grade_outcome(result.question, pool, rob)
+    loo = sensitivity_mod.leave_one_out(inputs, measure=result.question.measure)
+
+    return ReviewResult(
+        question=result.question,
+        extractions=extractions,
+        validations=validations,
+        pool=pool,
+        summary=summary,
+        rob=rob,
+        grade=grade,
+        sensitivity=loo,
+        diversity=diversity,
     )

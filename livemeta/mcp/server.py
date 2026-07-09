@@ -27,8 +27,14 @@ from ..core import llm as llm_mod
 from ..core import rob as rob_mod
 from ..core import search as search_mod
 from ..core import validate as validate_mod
-from ..core.pipeline import repool_with_decisions, run_review_collect
+from ..core import pipeline as pipeline_mod
+from ..core.pipeline import (
+    repool_with_decisions,
+    repool_with_diversity,
+    run_review_collect,
+)
 from ..core.schema import (
+    DiversityDecision,
     EffectMeasure,
     GradeAssessment,
     LeaveOneOutRow,
@@ -44,6 +50,7 @@ from ..core.schema import (
     ValidationResult,
 )
 from ..core.sources.clinicaltrials import ClinicalTrialsClient
+from ..core.sources.europepmc import EuropePmcClient
 from ..core.stats import engine as stats_engine
 from ..core.stats import sensitivity as sensitivity_mod
 from ..core.store import SnapshotStore, make_store
@@ -53,6 +60,7 @@ mcp = FastMCP("livemeta")
 # --- Dependency seams (overridden in tests to run offline) -------------------
 
 _client: ClinicalTrialsClient | None = None
+_epmc_client: EuropePmcClient | None = None
 _store: SnapshotStore | None = None
 
 
@@ -66,6 +74,18 @@ def get_client() -> ClinicalTrialsClient:
     if _client is None:
         _client = ClinicalTrialsClient()
     return _client
+
+
+def set_epmc_client(client: EuropePmcClient) -> None:
+    global _epmc_client
+    _epmc_client = client
+
+
+def get_epmc_client() -> EuropePmcClient:
+    global _epmc_client
+    if _epmc_client is None:
+        _epmc_client = EuropePmcClient()
+    return _epmc_client
 
 
 def set_store(store: SnapshotStore) -> None:
@@ -112,14 +132,34 @@ def search_trials(
 
 
 @mcp.tool()
-def extract_effects(trial_id: str) -> TrialExtraction:
-    """Extract the primary hazard ratio and CI for one trial, with provenance.
+def extract_effects(trial_id: str, measure: str = "HR") -> TrialExtraction:
+    """Extract the primary effect for one trial (per `measure`), with provenance.
 
-    Flags (rather than guesses) when the structured result is absent or
-    incomplete.
+    Routes by reference id: an NCT id is read from ClinicalTrials.gov structured
+    results; a PMID/PMC id is read from the Europe PMC published record by Claude.
+    Dispatches on the effect measure (ratio+CI, 2x2, or mean/SD/n) and flags
+    rather than guesses when the effect is absent, incomplete, or low-confidence.
     """
-    study = get_client().fetch_study(trial_id)
-    return extract_mod.extract_hr(study)
+    if trial_id.strip().upper().startswith("NCT"):
+        study = get_client().fetch_study(trial_id)
+        return extract_mod.extract(study, EffectMeasure(measure))
+    doc = get_epmc_client().fetch_study(trial_id)
+    return extract_mod.extract_from_text(doc, EffectMeasure(measure))
+
+
+@mcp.tool()
+def search_publications(query: str, max_results: int = 25) -> list[TrialCandidate]:
+    """Search Europe PMC for published trials (PMID/PMC), the second data source.
+
+    Complements `search_trials` (ClinicalTrials.gov) for trials whose effect data
+    lives in a paper rather than a structured registry result.
+    """
+    hits = get_epmc_client().search_studies(query, page_size=max_results)
+    return [
+        TrialCandidate(nct_id=h["id"], title=h.get("title", ""), source="europepmc")
+        for h in hits
+        if h.get("id")
+    ]
 
 
 @mcp.tool()
@@ -130,7 +170,7 @@ def validate(extractions: list[dict]) -> list[ValidationResult]:
     pass/flag verdict per trial; anything flagged must not be pooled.
     """
     parsed = [TrialExtraction.model_validate(e) for e in extractions]
-    return validate_mod.validate_ratio(parsed)
+    return validate_mod.validate_extractions(parsed)
 
 
 @mcp.tool()
@@ -142,10 +182,10 @@ def pool(extractions: list[dict], measure: str = "HR") -> PoolResult:
     valid trials.
     """
     parsed = [TrialExtraction.model_validate(e) for e in extractions]
-    validations = validate_mod.validate_ratio(parsed)
+    validations = validate_mod.validate_extractions(parsed)
     passed = {v.study_id for v in validations if v.passed}
-    points = [e.point for e in parsed if e.study_id in passed and e.point]
-    return stats_engine.pool(points, measure=EffectMeasure(measure))
+    inputs = pipeline_mod._pool_inputs(parsed, passed)
+    return stats_engine.pool(inputs, measure=EffectMeasure(measure))
 
 
 @mcp.tool()
@@ -184,6 +224,26 @@ def record_decision(
 
 
 @mcp.tool()
+def confirm_diversity(question_id: str, reason: str | None = None) -> ReviewResult:
+    """Lift the homogeneity gate for a withheld review and pool it.
+
+    When a review was withheld because the trials were clinically diverse or
+    statistically heterogeneous, a human confirms they are combinable; this
+    re-pools the same validated extractions and snapshots the result. The model
+    never edits numbers — confirmation only lifts the gate.
+    """
+    store = get_store()
+    latest = store.load_latest(question_id)
+    if latest is None:
+        raise ValueError(
+            f"No existing review for question_id {question_id!r}; run `run_review` first."
+        )
+    confirmed = repool_with_diversity(latest, DiversityDecision(reason=reason))
+    store.save_snapshot(confirmed)
+    return confirmed
+
+
+@mcp.tool()
 def assess_rob(trial_id: str) -> RobAssessment:
     """Appraise one trial's risk of bias (RoB 2) across the five domains.
 
@@ -203,10 +263,10 @@ def leave_one_out(question_id: str) -> list[LeaveOneOutRow]:
         raise ValueError(
             f"No existing review for question_id {question_id!r}; run `run_review` first."
         )
-    validations = validate_mod.validate_ratio(latest.extractions)
+    validations = validate_mod.validate_extractions(latest.extractions)
     passed = {v.study_id for v in validations if v.passed}
-    points = [e.point for e in latest.extractions if e.study_id in passed and e.point]
-    return sensitivity_mod.leave_one_out(points, measure=latest.question.measure)
+    inputs = pipeline_mod._pool_inputs(latest.extractions, passed)
+    return sensitivity_mod.leave_one_out(inputs, measure=latest.question.measure)
 
 
 @mcp.tool()
