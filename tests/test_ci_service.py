@@ -107,6 +107,17 @@ def test_link_surfaces_evidence_badge(tmp_path):
     assert cell.evidence.conclusion == "significant reduction"
 
 
+def test_live_search_failure_degrades_gracefully(tmp_path):
+    store = SnapshotStore(data_dir=tmp_path)
+
+    def boom(condition):
+        raise RuntimeError("403 Forbidden from CT.gov")
+
+    ls = service.get_landscape(store, "T2D", search_pipeline=boom)
+    assert ls.cells == []  # no crash
+    assert any("unavailable" in n for n in ls.notes)
+
+
 def test_asset_timeline_filters_by_name(tmp_path):
     store = SnapshotStore(data_dir=tmp_path)
     studies = [

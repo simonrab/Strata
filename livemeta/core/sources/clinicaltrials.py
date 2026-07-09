@@ -88,3 +88,32 @@ class ClinicalTrialsClient:
         )
         resp.raise_for_status()
         return resp.json().get("studies", [])
+
+    # The deeper pull for an asset dossier / indication map: adds locations
+    # (geography), eligibility (sub-populations), enrolment, and the results flag.
+    _DETAIL_FIELDS = _PIPELINE_FIELDS + "," + ",".join(
+        (
+            "protocolSection.contactsLocationsModule",
+            "protocolSection.eligibilityModule",
+            "derivedSection.conditionBrowseModule",
+            "hasResults",
+        )
+    )
+
+    def _search_detail(self, param: str, value: str, page_size: int) -> list[dict]:
+        resp = httpx.get(
+            f"{self._base}/studies",
+            params={param: value, "pageSize": page_size, "fields": self._DETAIL_FIELDS},
+            headers=_HEADERS,
+            timeout=self._timeout,
+        )
+        resp.raise_for_status()
+        return resp.json().get("studies", [])
+
+    def search_by_intervention(self, name: str, page_size: int = 1000) -> list[dict]:
+        """All trials for a drug (by intervention name), with the detail fields."""
+        return self._search_detail("query.intr", name, page_size)
+
+    def search_by_condition(self, name: str, page_size: int = 1000) -> list[dict]:
+        """All trials in an indication (by condition), with the detail fields."""
+        return self._search_detail("query.cond", name, page_size)

@@ -100,7 +100,7 @@ describe("CompetitorLandscape", () => {
     fireEvent.change(screen.getByLabelText("as of year"), { target: { value: "2015" } });
 
     await waitFor(() =>
-      expect(getLandscape).toHaveBeenCalledWith("Type 2 Diabetes", "2015-12-31")
+      expect(getLandscape).toHaveBeenCalledWith("Obesity", "2015-12-31")
     );
     expect(screen.getByTestId("as-of-label")).toHaveTextContent("Dec 2015");
   });

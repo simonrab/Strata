@@ -22,7 +22,14 @@ from mcp.server.fastmcp import FastMCP
 from ..core import demo
 from ..core import extract as extract_mod
 from ..core.ci import service as ci_service
-from ..core.ci.schema import DevelopmentEvent, Landscape
+from ..core.ci.schema import (
+    AssetDossier,
+    DevelopmentEvent,
+    IndicationMap,
+    Landscape,
+    SourceSelection,
+)
+from ..core.sources.openfda import OpenFdaClient
 from ..core import grade as grade_mod
 from ..core import living as living_mod
 from ..core import llm as llm_mod
@@ -88,6 +95,21 @@ def get_epmc_client() -> EuropePmcClient:
     if _epmc_client is None:
         _epmc_client = EuropePmcClient()
     return _epmc_client
+
+
+_openfda: OpenFdaClient | None = None
+
+
+def set_openfda(client: OpenFdaClient) -> None:
+    global _openfda
+    _openfda = client
+
+
+def get_openfda() -> OpenFdaClient:
+    global _openfda
+    if _openfda is None:
+        _openfda = OpenFdaClient()
+    return _openfda
 
 
 def set_store(store: SnapshotStore) -> None:
@@ -344,6 +366,34 @@ def ingest_announcement(
     stage. Persisted so they appear on the landscape.
     """
     return ci_service.ingest_to_landscape(get_store(), condition, text, source_label)
+
+
+@mcp.tool()
+def asset_dossier(name: str, sources: str | None = None) -> AssetDossier:
+    """Deep competitive dossier for one drug: every trial (phase, status,
+    enrolment, countries, readouts), pipeline events, sub-indications, openFDA
+    approvals, and the living pooled evidence. `sources` (comma list) selects the
+    data sources; default is the structured trio (ctgov, pubmed, openfda)."""
+    return ci_service.asset_dossier(
+        get_store(),
+        name,
+        search=get_client().search_by_intervention,
+        openfda=get_openfda(),
+        selection=SourceSelection.from_param(sources),
+    )
+
+
+@mcp.tool()
+def indication_map(name: str, sources: str | None = None) -> IndicationMap:
+    """Break an indication into its sub-populations (e.g. obesity + established
+    CVD, obesity in adults >=65), each with the assets, stage distribution,
+    geography, and evidence targeting it."""
+    return ci_service.indication_map(
+        get_store(),
+        name,
+        search=get_client().search_by_condition,
+        selection=SourceSelection.from_param(sources),
+    )
 
 
 def main() -> None:

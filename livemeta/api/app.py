@@ -28,7 +28,14 @@ from pydantic import BaseModel
 
 from ..core import demo, living, llm, pipeline, rob as rob_mod
 from ..core.ci import service as ci_service
-from ..core.ci.schema import DevelopmentEvent, Landscape
+from ..core.ci.schema import (
+    AssetDossier,
+    DevelopmentEvent,
+    IndicationMap,
+    Landscape,
+    SourceSelection,
+)
+from ..core.sources.openfda import OpenFdaClient
 from ..core.diff import diff_reviews, status_from_diff
 from ..core.schema import (
     DiversityDecision,
@@ -84,6 +91,21 @@ def get_ci_search():
     Returns the wide-fields search that keeps sponsor/phase/status/interventions
     (overridden in tests with canned studies so the landscape is network-free)."""
     return ClinicalTrialsClient().search_pipeline
+
+
+def get_ci_asset_search():
+    """Injectable CT.gov search by intervention (a drug's trials) for the dossier."""
+    return ClinicalTrialsClient().search_by_intervention
+
+
+def get_ci_indication_search():
+    """Injectable CT.gov search by condition (an indication's trials) for the map."""
+    return ClinicalTrialsClient().search_by_condition
+
+
+def get_openfda():
+    """Injectable openFDA approvals client (overridden in tests)."""
+    return OpenFdaClient()
 
 
 class ParseRequest(BaseModel):
@@ -360,6 +382,36 @@ def link_landscape(
     return ci_service.get_landscape(store, req.condition)
 
 
+@app.get("/api/asset/{name}", response_model=AssetDossier)
+def asset_dossier(
+    name: str,
+    sources: str | None = None,
+    store: SnapshotStore = Depends(get_store),
+    search=Depends(get_ci_asset_search),
+    openfda=Depends(get_openfda),
+) -> AssetDossier:
+    """Deep dossier for one drug: every trial, geography, readouts, events,
+    sub-indications, approvals, and the living pooled evidence. `sources` selects
+    which data sources are used (default: the structured trio)."""
+    selection = SourceSelection.from_param(sources)
+    return ci_service.asset_dossier(
+        store, name, search=search, openfda=openfda, selection=selection
+    )
+
+
+@app.get("/api/indication/{name}", response_model=IndicationMap)
+def indication_map(
+    name: str,
+    sources: str | None = None,
+    store: SnapshotStore = Depends(get_store),
+    search=Depends(get_ci_indication_search),
+) -> IndicationMap:
+    """An indication broken into its sub-populations, each with its assets,
+    stage distribution, geography, and evidence."""
+    selection = SourceSelection.from_param(sources)
+    return ci_service.indication_map(store, name, search=search, selection=selection)
+
+
 @app.websocket("/ws/review")
 async def ws_review(
     websocket: WebSocket,
@@ -393,3 +445,31 @@ def _question_from_payload(payload: dict) -> Question:
     if payload.get("question"):
         return Question.model_validate(payload["question"])
     return demo.GLP1_MACE_QUESTION
+
+
+# --- Serve the built web UI (single-origin deploy) ---------------------------
+#
+# When a built SPA is present (LIVEMETA_WEB_DIST, or ./static_web next to the
+# repo root), the backend serves it too, so one Railway URL is the whole app —
+# no separate frontend host, no CORS. Client-side routes (/landscape, /reviews/…)
+# fall back to index.html. Defined last so every /api and /ws route wins first.
+import os as _os  # noqa: E402
+
+from fastapi.responses import FileResponse  # noqa: E402
+from fastapi.staticfiles import StaticFiles  # noqa: E402
+
+_REPO_ROOT = _os.path.dirname(_os.path.dirname(_os.path.dirname(__file__)))
+_WEB_DIST = _os.environ.get("LIVEMETA_WEB_DIST", _os.path.join(_REPO_ROOT, "static_web"))
+
+if _os.path.isdir(_WEB_DIST):
+    _ASSETS = _os.path.join(_WEB_DIST, "assets")
+    if _os.path.isdir(_ASSETS):
+        app.mount("/assets", StaticFiles(directory=_ASSETS), name="assets")
+
+    @app.get("/{full_path:path}", include_in_schema=False)
+    def _spa(full_path: str):
+        """Serve a real static file if it exists, else the SPA entrypoint."""
+        candidate = _os.path.join(_WEB_DIST, full_path)
+        if full_path and _os.path.isfile(candidate):
+            return FileResponse(candidate)
+        return FileResponse(_os.path.join(_WEB_DIST, "index.html"))

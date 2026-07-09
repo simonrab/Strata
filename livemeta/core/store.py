@@ -15,7 +15,7 @@ from contextlib import closing
 from datetime import datetime, timezone
 from pathlib import Path
 
-from .ci.schema import DevelopmentEvent
+from .ci.schema import DevelopmentEvent, RegulatoryApproval, SubPopulation
 from .schema import ReviewDecision, ReviewResult, RobDecision, SnapshotMeta
 
 _DEFAULT_DIR = ".livemeta_data"
@@ -103,6 +103,17 @@ class SnapshotStore:
                     question_id  TEXT NOT NULL,
                     updated_at   TEXT NOT NULL,
                     PRIMARY KEY (landscape_id, asset_name, indication)
+                );
+                CREATE TABLE IF NOT EXISTS subpop_cache (
+                    nct_id     TEXT PRIMARY KEY,
+                    subpop_json TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                );
+                CREATE TABLE IF NOT EXISTS approvals (
+                    application_number TEXT PRIMARY KEY,
+                    drug          TEXT NOT NULL,
+                    approval_json TEXT NOT NULL,
+                    updated_at    TEXT NOT NULL
                 );
                 """
             )
@@ -322,3 +333,51 @@ class SnapshotStore:
                 (landscape_id,),
             ).fetchall()
         return {(r["asset_name"], r["indication"]): r["question_id"] for r in rows}
+
+    def load_all_links(self) -> dict[tuple[str, str], str]:
+        """Every asset×indication → question_id link across all landscapes."""
+        with closing(self._connect()) as conn:
+            rows = conn.execute(
+                "SELECT asset_name, indication, question_id FROM landscape_links"
+            ).fetchall()
+        return {(r["asset_name"], r["indication"]): r["question_id"] for r in rows}
+
+    # --- v2: sub-population cache (LLM cost) + openFDA approvals cache --------
+
+    def save_subpop(self, nct_id: str, subpop: SubPopulation) -> None:
+        with closing(self._connect()) as conn, conn:
+            conn.execute(
+                "INSERT INTO subpop_cache (nct_id, subpop_json, updated_at) VALUES (?, ?, ?) "
+                "ON CONFLICT(nct_id) DO UPDATE SET subpop_json = excluded.subpop_json, "
+                "updated_at = excluded.updated_at",
+                (nct_id, subpop.model_dump_json(), _now()),
+            )
+
+    def load_subpops(self, nct_ids: list[str]) -> dict[str, SubPopulation]:
+        if not nct_ids:
+            return {}
+        placeholders = ",".join("?" for _ in nct_ids)
+        with closing(self._connect()) as conn:
+            rows = conn.execute(
+                f"SELECT nct_id, subpop_json FROM subpop_cache WHERE nct_id IN ({placeholders})",
+                tuple(nct_ids),
+            ).fetchall()
+        return {r["nct_id"]: SubPopulation.model_validate_json(r["subpop_json"]) for r in rows}
+
+    def save_approvals(self, approvals: list[RegulatoryApproval]) -> None:
+        with closing(self._connect()) as conn, conn:
+            for a in approvals:
+                conn.execute(
+                    "INSERT INTO approvals (application_number, drug, approval_json, updated_at) "
+                    "VALUES (?, ?, ?, ?) ON CONFLICT(application_number) DO UPDATE SET "
+                    "approval_json = excluded.approval_json, updated_at = excluded.updated_at",
+                    (a.application_number, a.drug, a.model_dump_json(), _now()),
+                )
+
+    def load_approvals(self, drug: str) -> list[RegulatoryApproval]:
+        with closing(self._connect()) as conn:
+            rows = conn.execute(
+                "SELECT approval_json FROM approvals WHERE drug = ? ORDER BY application_number",
+                (drug,),
+            ).fetchall()
+        return [RegulatoryApproval.model_validate_json(r["approval_json"]) for r in rows]

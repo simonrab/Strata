@@ -370,3 +370,114 @@ export interface Landscape {
   cells: LandscapeCell[];
   notes: string[];
 }
+
+// --- v2: source selection, asset dossiers, indication mapping ----------------
+
+export type Source = "ctgov" | "pubmed" | "openfda" | "announcement" | "filing";
+
+export const STRUCTURED_SOURCES: Source[] = ["ctgov", "pubmed", "openfda"];
+export const FREE_TEXT_SOURCES: Source[] = ["announcement", "filing"];
+
+export const SOURCE_LABEL: Record<Source, string> = {
+  ctgov: "ClinicalTrials.gov",
+  pubmed: "PubMed / Europe PMC",
+  openfda: "openFDA (approvals)",
+  announcement: "Announcements",
+  filing: "Filings",
+};
+
+export interface SubPopulation {
+  base_indication: string;
+  age_min?: number | null;
+  age_max?: number | null;
+  sex?: string | null;
+  comorbidities: string[];
+  line_of_therapy?: string | null;
+  prior_treatment?: string | null;
+  label: string;
+  provenance: Provenance[];
+}
+
+export interface TrialDetail {
+  nct_id: string;
+  title: string;
+  asset_name: string;
+  phase: Phase;
+  status?: string | null;
+  enrollment?: number | null;
+  start_date?: string | null;
+  primary_completion_date?: string | null;
+  results_posted_date?: string | null;
+  has_results: boolean;
+  sponsor?: string | null;
+  sponsor_class?: string | null;
+  countries: string[];
+  indication: string;
+  sub_population?: SubPopulation | null;
+  effect?: TrialExtraction | null;
+  provenance: Provenance[];
+}
+
+export interface RegulatoryApproval {
+  drug: string;
+  sponsor?: string | null;
+  application_number: string;
+  brand_names: string[];
+  approval_date?: string | null;
+  marketing_status?: string | null;
+  indication_approx?: string | null;
+  provenance: Provenance[];
+}
+
+export interface CountryCount {
+  country: string;
+  trials: number;
+}
+
+export interface SubIndicationGroup {
+  signature: string;
+  label: string;
+  trial_ids: string[];
+  phases: string[];
+  evidence?: EvidenceBadge | null;
+}
+
+export interface Asset {
+  name: string;
+  aliases: string[];
+  sponsor?: string | null;
+  sponsor_class?: string | null;
+  drug_class?: string | null;
+  provenance: Provenance[];
+}
+
+export interface AssetDossier {
+  asset: Asset;
+  sources: Source[];
+  trials: TrialDetail[];
+  countries: CountryCount[];
+  events: DevelopmentEvent[];
+  readouts: TrialDetail[];
+  approvals: RegulatoryApproval[];
+  sub_indications: SubIndicationGroup[];
+  notes: string[];
+}
+
+export interface IndicationNode {
+  signature: string;
+  label: string;
+  sub_population?: SubPopulation | null;
+  assets: string[];
+  trial_count: number;
+  stage_distribution: Record<string, number>;
+  countries: CountryCount[];
+  approvals: RegulatoryApproval[];
+  evidence?: EvidenceBadge | null;
+}
+
+export interface IndicationMap {
+  indication: string;
+  sources: Source[];
+  nodes: IndicationNode[];
+  notes: string[];
+}

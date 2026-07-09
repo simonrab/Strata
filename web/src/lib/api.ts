@@ -2,7 +2,9 @@
 // review.tsx; everything request/response goes through here.
 
 import type {
+  AssetDossier,
   DevelopmentEvent,
+  IndicationMap,
   Landscape,
   Question,
   ReviewDecision,
@@ -10,6 +12,7 @@ import type {
   ReviewResult,
   ReviewSummary,
   SnapshotMeta,
+  Source,
 } from "./types";
 
 // In production the backend lives on a different origin (Railway); VITE_API_URL
@@ -165,5 +168,29 @@ export async function ingestLandscape(body: {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     })
+  );
+}
+
+// --- v2: asset dossier + indication map --------------------------------------
+
+function sourcesParam(sources?: Source[]): string {
+  return sources && sources.length ? `?sources=${sources.join(",")}` : "";
+}
+
+export async function getAssetDossier(
+  name: string,
+  sources?: Source[]
+): Promise<AssetDossier> {
+  return json<AssetDossier>(
+    await fetch(apiUrl(`/api/asset/${encodeURIComponent(name)}${sourcesParam(sources)}`))
+  );
+}
+
+export async function getIndicationMap(
+  name: string,
+  sources?: Source[]
+): Promise<IndicationMap> {
+  return json<IndicationMap>(
+    await fetch(apiUrl(`/api/indication/${encodeURIComponent(name)}${sourcesParam(sources)}`))
   );
 }

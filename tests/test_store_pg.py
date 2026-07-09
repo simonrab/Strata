@@ -208,3 +208,25 @@ def test_links_round_trip_and_upsert(store):
     assert store.load_links("t2d") == {("DrugA", "T2D"): "glp1-mace"}
     store.save_link("t2d", "DrugA", "T2D", "glp1-mace-v2")
     assert store.load_links("t2d") == {("DrugA", "T2D"): "glp1-mace-v2"}
+
+
+def test_subpop_and_approvals_cache_round_trip(store):
+    from livemeta.core.ci.schema import RegulatoryApproval, SubPopulation
+
+    assert store.load_subpops(["NCT1"]) == {}
+    store.save_subpop("NCT1", SubPopulation(base_indication="Obesity", comorbidities=["ckd"]))
+    store.save_subpop("NCT1", SubPopulation(base_indication="Obesity", comorbidities=["t2d"]))
+    got = store.load_subpops(["NCT1", "NCT2"])
+    assert set(got) == {"NCT1"} and got["NCT1"].comorbidities == ["t2d"]
+
+    assert store.load_approvals("semaglutide") == []
+    store.save_approvals([
+        RegulatoryApproval(drug="semaglutide", application_number="NDA1"),
+    ])
+    assert [a.application_number for a in store.load_approvals("semaglutide")] == ["NDA1"]
+
+
+def test_load_all_links_spans_landscapes(store):
+    store.save_link("obesity", "Semaglutide", "Obesity", "sema-mace")
+    store.save_link("t2d", "Tirzepatide", "T2D", "tirz-mace")
+    assert store.load_all_links()[("Semaglutide", "Obesity")] == "sema-mace"

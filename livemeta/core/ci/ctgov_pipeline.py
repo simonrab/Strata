@@ -15,6 +15,7 @@ from .schema import (
     EventType,
     Phase,
     SourceType,
+    TrialDetail,
 )
 
 # CT.gov `designModule.phases` (a list) → our single ordered Phase.
@@ -171,3 +172,64 @@ def study_to_events(study: dict) -> list[DevelopmentEvent]:
             )
         )
     return events
+
+
+def _countries(study: dict) -> list[str]:
+    locations = (
+        _protocol(study).get("contactsLocationsModule", {}).get("locations", []) or []
+    )
+    seen: list[str] = []
+    for loc in locations:
+        country = (loc.get("country") or "").strip()
+        if country and country not in seen:
+            seen.append(country)
+    return seen
+
+
+def _enrollment(study: dict) -> int | None:
+    info = _protocol(study).get("designModule", {}).get("enrollmentInfo", {})
+    value = info.get("count")
+    try:
+        return int(value) if value is not None else None
+    except (TypeError, ValueError):
+        return None
+
+
+def study_to_trial_detail(study: dict) -> TrialDetail:
+    """Deterministic map from a CT.gov v2 record to the enriched TrialDetail.
+
+    Adds geography (countries), enrolment, and readout status/date on top of the
+    phase/status/dates/sponsor the events parser already reads. Sub-population and
+    the headline effect are attached later (Claude / results extraction).
+    """
+    nct = _nct(study)
+    ident = _protocol(study).get("identificationModule", {})
+    status_mod = _protocol(study).get("statusModule", {})
+    sponsor, sponsor_class = _sponsor(study)
+    results_posted = _norm_date(status_mod.get("resultsFirstPostDateStruct"))
+    has_results = bool(study.get("hasResults")) or results_posted is not None
+
+    return TrialDetail(
+        nct_id=nct,
+        title=ident.get("briefTitle") or ident.get("officialTitle") or nct,
+        asset_name=_asset_name(study) or nct,
+        phase=_phase(study),
+        status=status_mod.get("overallStatus"),
+        enrollment=_enrollment(study),
+        start_date=_norm_date(status_mod.get("startDateStruct")),
+        primary_completion_date=_norm_date(status_mod.get("primaryCompletionDateStruct")),
+        results_posted_date=results_posted,
+        has_results=has_results,
+        sponsor=sponsor,
+        sponsor_class=sponsor_class,
+        countries=_countries(study),
+        indication=_condition(study),
+        provenance=[
+            Provenance(
+                trial_id=nct,
+                snippet=f"{_asset_name(study) or nct} — {_phase(study).value} for {_condition(study)}",
+                source_url=f"https://clinicaltrials.gov/study/{nct}",
+                field="protocolSection",
+            )
+        ],
+    )

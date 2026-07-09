@@ -12,7 +12,7 @@ from enum import Enum
 
 from pydantic import BaseModel, Field
 
-from ..schema import Provenance
+from ..schema import Provenance, TrialExtraction
 
 
 class Phase(str, Enum):
@@ -173,4 +173,199 @@ class Landscape(BaseModel):
     assets: list[str] = Field(default_factory=list)
     indications: list[str] = Field(default_factory=list)
     cells: list[LandscapeCell] = Field(default_factory=list)
+    notes: list[str] = Field(default_factory=list)
+
+
+# ---------------------------------------------------------------------------
+# v2 — Deep CI: source selection, sub-populations, trial detail, dossiers, maps
+# ---------------------------------------------------------------------------
+
+
+class Source(str, Enum):
+    """A selectable data source. The structured three are the authoritative core;
+    the free-text two are Claude-read and off by default."""
+
+    CTGOV = "ctgov"
+    PUBMED = "pubmed"  # Europe PMC / PubMed
+    OPENFDA = "openfda"
+    ANNOUNCEMENT = "announcement"
+    FILING = "filing"
+
+
+STRUCTURED_SOURCES = frozenset({Source.CTGOV, Source.PUBMED, Source.OPENFDA})
+FREE_TEXT_SOURCES = frozenset({Source.ANNOUNCEMENT, Source.FILING})
+
+
+class SourceSelection(BaseModel):
+    """Which sources the platform is allowed to use. Default: structured only.
+
+    One selection is threaded through every builder so the user can exclude
+    anything that isn't from ClinicalTrials.gov / PubMed / openFDA. Free-text
+    (announcement/filing) is opt-in.
+    """
+
+    enabled: list[Source] = Field(default_factory=lambda: list(STRUCTURED_SOURCES))
+
+    def allows(self, source: Source | SourceType | str) -> bool:
+        value = source.value if isinstance(source, (Source, SourceType)) else str(source)
+        try:
+            return Source(value) in set(self.enabled)
+        except ValueError:
+            return False
+
+    @property
+    def free_text_enabled(self) -> bool:
+        return any(s in FREE_TEXT_SOURCES for s in self.enabled)
+
+    @classmethod
+    def default(cls) -> "SourceSelection":
+        return cls(enabled=list(STRUCTURED_SOURCES))
+
+    @classmethod
+    def from_param(cls, param: str | None) -> "SourceSelection":
+        """Parse a `sources=ctgov,pubmed,openfda` query param; None -> default."""
+        if not param:
+            return cls.default()
+        chosen: list[Source] = []
+        for token in param.split(","):
+            token = token.strip().lower()
+            if not token:
+                continue
+            try:
+                chosen.append(Source(token))
+            except ValueError:
+                continue  # ignore unknown tokens rather than erroring
+        return cls(enabled=chosen or list(STRUCTURED_SOURCES))
+
+
+class SubPopulation(BaseModel):
+    """A trial's precise target population, refining a top-level indication.
+
+    Claude reads the eligibility text into this structure; a deterministic
+    `signature()` clusters trials with the same target into one indication node
+    (e.g. "obesity + established CVD, adults >=45"). When unread, it degrades to
+    the base indication alone — never a fabricated sub-group.
+    """
+
+    base_indication: str
+    age_min: int | None = None
+    age_max: int | None = None
+    sex: str | None = None  # ALL | MALE | FEMALE
+    comorbidities: list[str] = Field(default_factory=list)  # e.g. established_cvd, ckd, t2d
+    line_of_therapy: str | None = None
+    prior_treatment: str | None = None
+    label: str = ""
+    provenance: list[Provenance] = Field(default_factory=list)
+
+    def signature(self) -> str:
+        """Canonical clustering key — trials with the same key share a node."""
+        comorbid = "+".join(sorted(c.strip().lower() for c in self.comorbidities if c.strip()))
+        age = f"{self.age_min if self.age_min is not None else ''}-{self.age_max if self.age_max is not None else ''}"
+        parts = [
+            self.base_indication.strip().lower(),
+            (self.sex or "all").lower(),
+            age if age != "-" else "",
+            comorbid,
+            (self.line_of_therapy or "").lower(),
+        ]
+        return "|".join(p for p in parts if p)
+
+    def display(self) -> str:
+        """A human label, derived if Claude didn't supply one."""
+        if self.label:
+            return self.label
+        bits = [self.base_indication]
+        if self.comorbidities:
+            bits.append("+ " + ", ".join(self.comorbidities))
+        if self.age_min:
+            bits.append(f"adults >={self.age_min}")
+        if self.sex and self.sex.upper() not in ("ALL", ""):
+            bits.append(self.sex.lower())
+        return " ".join(bits)
+
+
+class TrialDetail(BaseModel):
+    """One trial as it appears in an asset dossier / indication map."""
+
+    nct_id: str
+    title: str = ""
+    asset_name: str = ""
+    phase: Phase = Phase.UNKNOWN
+    status: str | None = None
+    enrollment: int | None = None
+    start_date: str | None = None
+    primary_completion_date: str | None = None
+    results_posted_date: str | None = None
+    has_results: bool = False
+    sponsor: str | None = None
+    sponsor_class: str | None = None
+    countries: list[str] = Field(default_factory=list)
+    indication: str = ""
+    sub_population: SubPopulation | None = None
+    effect: TrialExtraction | None = None  # headline effect when the trial has read out
+    provenance: list[Provenance] = Field(default_factory=list)
+
+
+class RegulatoryApproval(BaseModel):
+    """A regulatory approval from openFDA (drug / sponsor / date / brand)."""
+
+    drug: str
+    sponsor: str | None = None
+    application_number: str
+    brand_names: list[str] = Field(default_factory=list)
+    approval_date: str | None = None
+    marketing_status: str | None = None
+    indication_approx: str | None = None  # openFDA omits indication text; approximate only
+    provenance: list[Provenance] = Field(default_factory=list)
+
+
+class CountryCount(BaseModel):
+    country: str
+    trials: int
+
+
+class SubIndicationGroup(BaseModel):
+    """A dossier's trials grouped by the sub-population they target."""
+
+    signature: str
+    label: str
+    trial_ids: list[str] = Field(default_factory=list)
+    phases: list[str] = Field(default_factory=list)
+    evidence: EvidenceBadge | None = None
+
+
+class AssetDossier(BaseModel):
+    """Everything known about one asset, aggregated across its trials."""
+
+    asset: Asset
+    sources: list[Source] = Field(default_factory=list)
+    trials: list[TrialDetail] = Field(default_factory=list)
+    countries: list[CountryCount] = Field(default_factory=list)
+    events: list[DevelopmentEvent] = Field(default_factory=list)
+    readouts: list[TrialDetail] = Field(default_factory=list)
+    approvals: list[RegulatoryApproval] = Field(default_factory=list)
+    sub_indications: list[SubIndicationGroup] = Field(default_factory=list)
+    notes: list[str] = Field(default_factory=list)
+
+
+class IndicationNode(BaseModel):
+    """One sub-population within an indication, with its competitive field."""
+
+    signature: str
+    label: str
+    sub_population: SubPopulation | None = None
+    assets: list[str] = Field(default_factory=list)
+    trial_count: int = 0
+    stage_distribution: dict[str, int] = Field(default_factory=dict)
+    countries: list[CountryCount] = Field(default_factory=list)
+    approvals: list[RegulatoryApproval] = Field(default_factory=list)
+    evidence: EvidenceBadge | None = None
+
+
+class IndicationMap(BaseModel):
+    """An indication broken into its sub-populations, bottom-up from the trials."""
+
+    indication: str
+    sources: list[Source] = Field(default_factory=list)
+    nodes: list[IndicationNode] = Field(default_factory=list)
     notes: list[str] = Field(default_factory=list)
