@@ -75,3 +75,46 @@ def test_summary_is_recomputed_after_repool():
     assert repooled.pool is not None
     assert repooled.pool.k == 2
     assert "2 trials" in repooled.summary
+
+
+def test_run_fetches_every_trial_with_no_cap(monkeypatch):
+    # No run cap: a review fetches all candidates (concurrently). 40 trials means
+    # 40 fetches, all pooled. (Fast Python engine so 40 studies pool quickly.)
+    monkeypatch.setenv("LIVEMETA_STATS_ENGINE", "python")
+    sample = _fetch("NCT01179048")
+    fetched: list[str] = []
+
+    def counting_fetch(nct: str) -> dict:
+        fetched.append(nct)
+        return sample
+
+    question = demo.GLP1_MACE_QUESTION.model_copy(
+        update={"trial_ids": [f"NCT{i:08d}" for i in range(40)]}
+    )
+    result = run_review_collect(question, counting_fetch)
+
+    assert len(fetched) == 40
+    assert result.pool is not None
+    assert result.pool.k == 40
+
+
+def test_rob_is_scoped_to_pooled_trials_only(monkeypatch):
+    # RoB must appraise only the trials that make the pool, not every candidate:
+    # non-poolable trials (no extractable HR) are excluded from the RoB list.
+    monkeypatch.setenv("LIVEMETA_STATS_ENGINE", "python")
+    good = ["NCT01179048", "NCT01720446", "NCT02465515"]  # real fixtures with HRs
+    bad = ["NCTBAD0001", "NCTBAD0002"]  # no results section -> flagged, not pooled
+
+    def fetch(nct: str) -> dict:
+        if nct in bad:
+            return {"protocolSection": {"identificationModule": {"nctId": nct, "briefTitle": nct}}}
+        return _fetch(nct)
+
+    question = demo.GLP1_MACE_QUESTION.model_copy(update={"trial_ids": good + bad})
+    result = run_review_collect(question, fetch)
+
+    assert result.pool is not None
+    assert result.pool.k == 3
+    # RoB covers exactly the 3 pooled trials — the 2 unpoolable ones are excluded.
+    assert len(result.rob) == 3
+    assert {r.study_id for r in result.rob} == set(good)

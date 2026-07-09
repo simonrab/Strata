@@ -7,9 +7,8 @@ from recorded fixtures.
 
 from __future__ import annotations
 
-from collections.abc import Callable, Iterator
-
-from collections.abc import Sequence
+from collections.abc import Callable, Iterator, Sequence
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from .schema import (
     EffectMeasure,
@@ -17,10 +16,12 @@ from .schema import (
     LeaveOneOutRow,
     PipelineEvent,
     PoolResult,
+    Provenance,
     Question,
     ReviewDecision,
     ReviewResult,
     RobAssessment,
+    TrialExtraction,
 )
 from .sources.clinicaltrials import ClinicalTrialsClient
 from .stats import engine as stats_engine
@@ -30,6 +31,28 @@ from . import rob as rob_mod
 from . import validate as validate_mod
 
 FetchStudy = Callable[[str], dict]
+
+# The two I/O-bound stages — CT.gov fetches and per-trial RoB calls — run over
+# bounded worker pools instead of serially, so a broad candidate set no longer
+# means a serial crawl. Bounds are deliberate: too many parallel CT.gov requests
+# risk throttling the IP, and RoB concurrency stays modest for the model's rate
+# limits.
+_FETCH_CONCURRENCY = 8
+_ROB_CONCURRENCY = 5
+
+
+def _failed_extraction(nct: str, exc: Exception) -> TrialExtraction:
+    """A flagged placeholder for a trial that couldn't be retrieved, so one bad
+    fetch is dropped from the pool rather than aborting an otherwise-good run."""
+    return TrialExtraction(
+        study_id=nct,
+        label=nct,
+        flagged=True,
+        flag_reason=f"Could not retrieve from ClinicalTrials.gov: {exc}",
+        provenance=[
+            Provenance(trial_id=nct, snippet="", source_url=f"https://clinicaltrials.gov/study/{nct}")
+        ],
+    )
 
 
 def interpret_i2(i2: float) -> str:
@@ -76,25 +99,32 @@ def summarize(question: Question, pool: PoolResult) -> str:
     )
 
 
+def _assess_rob_concurrent(studies: Sequence[dict], llm_client) -> list[RobAssessment]:
+    """RoB 2 for the pooled trials, run over a bounded pool but order-preserved."""
+    if not studies:
+        return []
+    workers = min(_ROB_CONCURRENCY, len(studies))
+    with ThreadPoolExecutor(max_workers=workers) as ex:
+        return list(ex.map(lambda s: rob_mod.assess_rob(s, llm_client=llm_client), studies))
+
+
 def _appraise(
     question: Question,
-    studies_by_id: dict[str, dict],
+    pooled_studies: Sequence[dict],
     points: Sequence,
     pool: PoolResult,
     llm_client=None,
 ) -> tuple[list[RobAssessment], GradeAssessment, list[LeaveOneOutRow]]:
     """Run the three appraisal steps that follow a successful pool.
 
-    RoB 2 per trial (Claude judges; PENDING with no key), a leave-one-out
-    sensitivity view, and a GRADE certainty rating for the outcome. `grade` is
+    RoB 2 runs only on the *pooled* trials — you appraise what you pool, not every
+    candidate the search surfaced — concurrently and order-preserved. Plus a
+    leave-one-out sensitivity view and a GRADE certainty rating. `grade` is
     imported here to avoid a module import cycle (grade reuses this module).
     """
     from . import grade as grade_mod
 
-    rob = [
-        rob_mod.assess_rob(study, llm_client=llm_client)
-        for study in studies_by_id.values()
-    ]
+    rob = _assess_rob_concurrent(pooled_studies, llm_client)
     loo = sensitivity_mod.leave_one_out(points, measure=question.measure)
     grade = grade_mod.grade_outcome(question, pool, rob, llm_client=llm_client)
     return rob, grade, loo
@@ -118,19 +148,40 @@ def run_review(
         data={"trial_ids": question.trial_ids},
     )
 
-    extractions = []
+    # Fetch (I/O-bound) over a bounded thread pool rather than one-at-a-time, and
+    # tolerate a per-trial retrieval failure instead of aborting the whole run.
+    # Extractions are reassembled in the original order afterwards, so the pool,
+    # forest plot, and tests stay deterministic regardless of completion timing.
     studies_by_id: dict[str, dict] = {}
-    for nct in question.trial_ids:
-        study = fetch_study(nct)
-        studies_by_id[nct] = study
-        ext = extract_mod.extract_hr(study)
-        extractions.append(ext)
-        msg = (
-            f"{ext.label}: flagged for review ({ext.flag_reason})"
-            if ext.flagged
-            else f"{ext.label}: {ext.measure.value} {ext.hr} ({ext.ci_low}-{ext.ci_high})"
-        )
-        yield PipelineEvent(stage="extract", message=msg, data=ext.model_dump())
+    extractions_by_id: dict[str, TrialExtraction] = {}
+
+    def _fetch(nct: str):
+        try:
+            return nct, fetch_study(nct), None
+        except Exception as exc:  # reported per-trial below; never aborts the run
+            return nct, None, exc
+
+    workers = min(_FETCH_CONCURRENCY, max(1, len(question.trial_ids)))
+    with ThreadPoolExecutor(max_workers=workers) as pool_ex:
+        futures = [pool_ex.submit(_fetch, nct) for nct in question.trial_ids]
+        for future in as_completed(futures):
+            nct, study, err = future.result()
+            if study is None:
+                ext = _failed_extraction(nct, err)
+            else:
+                studies_by_id[nct] = study
+                ext = extract_mod.extract_hr(study)
+            extractions_by_id[nct] = ext
+            msg = (
+                f"{ext.label}: flagged for review ({ext.flag_reason})"
+                if ext.flagged
+                else f"{ext.label}: {ext.measure.value} {ext.hr} ({ext.ci_low}-{ext.ci_high})"
+            )
+            yield PipelineEvent(stage="extract", message=msg, data=ext.model_dump())
+
+    extractions = [
+        extractions_by_id[nct] for nct in question.trial_ids if nct in extractions_by_id
+    ]
 
     validations = validate_mod.validate_ratio(extractions)
     passed_ids = {v.study_id for v in validations if v.passed}
@@ -162,8 +213,12 @@ def run_review(
         data=pool.model_dump(),
     )
 
+    # Appraise only the trials that actually made the pool, in pool order.
+    pooled_studies = [
+        studies_by_id[p.study_id] for p in points if p.study_id in studies_by_id
+    ]
     rob, grade, sensitivity = _appraise(
-        question, studies_by_id, points, pool, llm_client=llm_client
+        question, pooled_studies, points, pool, llm_client=llm_client
     )
     n_pending = sum(1 for r in rob if r.overall.value == "pending")
     yield PipelineEvent(
