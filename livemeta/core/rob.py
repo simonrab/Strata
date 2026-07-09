@@ -35,11 +35,17 @@ ROB_DOMAINS: list[tuple[str, str]] = [
 _DEFAULT_MODEL = "claude-haiku-4-5-20251001"
 
 _SYSTEM_HINT = (
-    "You are appraising a randomized trial with the Cochrane RoB 2 tool. For each "
-    "of the five domains, judge the risk of bias as 'low', 'some_concerns', or "
-    "'high', give a one-sentence rationale, and quote the exact sentence from the "
-    "trial record that supports your judgment. Judge only — never compute an "
-    "overall score, and never invent a quote you cannot find."
+    "You are appraising a randomized trial with the Cochrane RoB 2 tool. Judge the "
+    "five domains in this exact order:\n"
+    "1. Randomization process\n"
+    "2. Deviations from intended interventions\n"
+    "3. Missing outcome data\n"
+    "4. Measurement of the outcome\n"
+    "5. Selection of the reported result\n"
+    "Return exactly these five domains in that order. For each, judge the risk of "
+    "bias as 'low', 'some_concerns', or 'high', give a one-sentence rationale, and "
+    "quote the exact sentence from the trial record that supports your judgment. "
+    "Judge only — never compute an overall score, and never invent a quote."
 )
 
 
@@ -91,13 +97,28 @@ def _pending_assessment(study_id: str, label: str) -> RobAssessment:
     )
 
 
+def _study_for_rob(study: dict) -> dict:
+    """A compact view of the trial for the model. RoB 2 judges design and conduct,
+    not the raw results tables — and full CT.gov records reach ~600KB (every
+    outcome measurement and baseline row), which overflows the model's input and
+    fails the whole assessment. Keep the protocol plus participant flow (dropouts,
+    for missing-outcome-data bias); drop the bulky results modules."""
+    results = study.get("resultsSection", {})
+    return {
+        "protocolSection": study.get("protocolSection", {}),
+        "resultsSection": {
+            "participantFlowModule": results.get("participantFlowModule", {}),
+        },
+    }
+
+
 def _llm_assess(study: dict, client, study_id: str, source_url: str) -> _RobDomains:
     model = os.environ.get("LIVEMETA_LLM_MODEL", _DEFAULT_MODEL)
     response = client.messages.parse(
         model=model,
         max_tokens=2048,
         system=_SYSTEM_HINT,
-        messages=[{"role": "user", "content": str(study)}],
+        messages=[{"role": "user", "content": str(_study_for_rob(study))}],
         output_format=_RobDomains,
     )
     return response.parsed_output
@@ -129,10 +150,18 @@ def assess_rob(study: dict, llm_client=None) -> RobAssessment:
     except Exception:
         return _pending_assessment(study_id, label)
 
+    # Match the model's domains to our canonical D1-D5. The model returns the five
+    # domains in order but names its keys freely (e.g. "bias_randomization" rather
+    # than "D1"), so fall back to positional mapping when the keys don't line up —
+    # otherwise every domain silently goes PENDING.
     by_key = {d.key: d for d in parsed.domains}
+    positional = not any(k in by_key for k, _ in ROB_DOMAINS)
     domains: list[RobDomain] = []
-    for key, name in ROB_DOMAINS:
-        out = by_key.get(key)
+    for i, (key, name) in enumerate(ROB_DOMAINS):
+        if positional:
+            out = parsed.domains[i] if i < len(parsed.domains) else None
+        else:
+            out = by_key.get(key)
         if out is None:
             domains.append(RobDomain(key=key, name=name, judgment=RobJudgment.PENDING))
             continue
