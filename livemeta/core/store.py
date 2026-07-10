@@ -351,6 +351,20 @@ class SnapshotStore:
             ).fetchall()
         return [DevelopmentEvent.model_validate_json(r["event_json"]) for r in rows]
 
+    def clear_events(self, landscape_id: str) -> None:
+        """Drop a landscape's cached CT.gov events so it re-seeds from a fresh search.
+
+        Needed because `save_events` only upserts — it never removes rows, so a
+        stale cache (e.g. seeded before a search-scoping fix) can only be cleaned
+        by deleting it and re-pulling. Scoped to CT.gov-sourced events so ingested
+        announcements/filings, which are not re-derivable from a search, survive.
+        """
+        with closing(self._connect()) as conn, conn:
+            conn.execute(
+                "DELETE FROM development_events WHERE landscape_id = ? AND source_type = ?",
+                (landscape_id, "ctgov"),
+            )
+
     def save_link(
         self, landscape_id: str, asset_name: str, indication: str, question_id: str
     ) -> None:

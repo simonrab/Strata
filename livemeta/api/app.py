@@ -420,6 +420,7 @@ def record_screening_decision(
 def get_landscape(
     condition: str,
     as_of: str | None = None,
+    refresh: bool = False,
     store: SnapshotStore = Depends(get_store),
     search=Depends(get_ci_search),
 ) -> Landscape:
@@ -427,8 +428,13 @@ def get_landscape(
 
     Assets × indications, cells colored by development stage, each carrying the
     living pooled-evidence badge when linked to a saved review.
+
+    `refresh=true` drops the condition's cached CT.gov events and re-pulls them
+    from the live (condition-scoped) search — use it to clean a stale cache.
     """
-    return ci_service.get_landscape(store, condition, as_of=as_of, search_pipeline=search)
+    return ci_service.get_landscape(
+        store, condition, as_of=as_of, search_pipeline=search, refresh=refresh
+    )
 
 
 @app.get("/api/landscape/asset/{name}", response_model=list[DevelopmentEvent])

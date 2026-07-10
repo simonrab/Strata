@@ -202,6 +202,14 @@ def test_reingesting_same_milestone_is_idempotent(store):
     assert loaded[0].phase.value == "phase_3"
 
 
+def test_clear_events_drops_a_landscapes_cache(store):
+    store.save_events("t2d", [_dev_event("DrugA", "T2D", "phase_2", "2016-01-01")])
+    store.save_events("nsclc", [_dev_event("DrugZ", "NSCLC", "phase_1", "2016-01-01")])
+    store.clear_events("t2d")
+    assert store.load_events("t2d") == []
+    assert [e.asset_name for e in store.load_events("nsclc")] == ["DrugZ"]
+
+
 def test_links_round_trip_and_upsert(store):
     assert store.load_links("t2d") == {}
     store.save_link("t2d", "DrugA", "T2D", "glp1-mace")

@@ -53,14 +53,22 @@ def get_landscape(
     condition: str,
     as_of: str | None = None,
     search_pipeline: Callable[[str], list[dict]] | None = None,
+    refresh: bool = False,
 ) -> Landscape:
     """Assemble the competitive matrix for a condition, as of a date.
 
     Seeds CT.gov-derived events into the store on first access (when a search
     function is supplied and nothing is stored yet), then assembles from the
     stored events + any ingested announcements + the evidence links.
+
+    `refresh=True` drops the condition's cached CT.gov events first, forcing a
+    re-pull from the live search — the way to clean a stale cache (e.g. one
+    seeded before a search-scoping fix). Ingested announcements and evidence
+    links are keyed separately and are preserved.
     """
     lid = slugify(condition)
+    if refresh and search_pipeline is not None:
+        store.clear_events(lid)
     events = store.load_events(lid)
     notes: list[str] = []
     if not events and search_pipeline is not None:
