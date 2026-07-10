@@ -25,7 +25,9 @@ class FixtureClient:
     def fetch_study(self, nct_id: str) -> dict:
         return json.loads((FIXTURES / f"{nct_id}.json").read_text())
 
-    def search_studies(self, query: str, page_size: int = 20) -> list[dict]:
+    def search_studies(
+        self, query: str, page_size: int = 20, interventional_only: bool = False
+    ) -> list[dict]:
         return [{"nct_id": "NCT01179048", "title": "LEADER"}]
 
 
@@ -104,3 +106,19 @@ def test_update_adds_trial_and_reports_diff():
     assert isinstance(diff.conclusion_changed, bool)
     # the re-run is persisted as a new version
     assert server.get_store().list_versions("glp1-mace") == [1, 2]
+
+
+def test_check_updates_returns_only_new_trials():
+    # Seed a 7-trial baseline, then let a re-search surface the held-out eighth.
+    q7 = GLP1_MACE_QUESTION.model_copy(update={"trial_ids": GLP1_CVOT_TRIALS[:7]})
+    server.get_store().save_snapshot(run_review_collect(q7, FixtureClient().fetch_study))
+
+    class _SearchClient(FixtureClient):
+        def search_studies(self, query, page_size=1000, interventional_only=False):
+            return [{"nct_id": nct, "title": nct} for nct in GLP1_CVOT_TRIALS]
+
+    server.set_client(_SearchClient())
+    new = server.check_updates("glp1-mace")
+
+    assert [c.nct_id for c in new] == [GLP1_CVOT_TRIALS[7]]
+    assert all(isinstance(c, TrialCandidate) for c in new)

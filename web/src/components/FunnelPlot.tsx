@@ -118,7 +118,7 @@ export function FunnelPlot({
       {egger && egger.applicable && (
         <p className="mt-2 font-mono text-[12px] text-ink-muted-light">
           Egger's test ({egger.k} studies): intercept {egger.intercept?.toFixed(2)}, p ={" "}
-          {egger.p?.toFixed(3)} —{" "}
+          {egger.p?.toFixed(3)} ·{" "}
           {egger.p != null && egger.p < 0.1
             ? "funnel asymmetry suggests possible small-study effects."
             : "no significant asymmetry."}

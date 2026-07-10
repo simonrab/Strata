@@ -12,11 +12,11 @@ export function EvidenceBadgeView({ badge }: { badge: EvidenceBadge }) {
     return (
       <div
         data-testid="evidence-gate"
-        className="mt-1 flex items-center gap-1 rounded-sm bg-risk-some-container px-1.5 py-0.5 text-[10px] font-medium text-risk-some"
+        className="mt-1 flex items-center gap-1 rounded-sm border border-risk-some bg-card-light px-1.5 py-0.5 text-[10px] font-medium text-risk-some"
         title="The meta-analysis withheld its pooled estimate until a reviewer confirms these trials are similar enough to combine."
       >
         <Icon name="gpp_maybe" size={12} />
-        Gate — pending confirmation
+        Gate · pending confirmation
       </div>
     );
   }

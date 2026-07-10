@@ -17,3 +17,9 @@ __pycache__/
 
 # Living-review snapshot store (Slice 2 stand-in for SQLite)
 .livemeta_data/
+.livemeta_local/
+
+# Node / build artifacts
+node_modules/
+static_web/
+web/dist/

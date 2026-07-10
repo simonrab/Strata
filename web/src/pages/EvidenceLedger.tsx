@@ -97,7 +97,7 @@ export function EvidenceLedger() {
             Evidence Ledger
           </h1>
           <p className="mt-1 font-serif text-[16px] text-ink-muted-light">
-            {review.question.pico.intervention} vs {review.question.pico.comparator} —{" "}
+            {review.question.pico.intervention} vs {review.question.pico.comparator} ·{" "}
             {review.question.pico.outcome}
           </p>
         </div>

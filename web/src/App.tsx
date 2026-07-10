@@ -6,6 +6,7 @@ import { Ask } from "./pages/Ask";
 import { RunningPipeline } from "./pages/RunningPipeline";
 import { Report } from "./pages/Report";
 import { EvidenceLedger } from "./pages/EvidenceLedger";
+import { Screening } from "./pages/Screening";
 import { ExtractionConfirmation } from "./pages/ExtractionConfirmation";
 import { ReviewReport } from "./pages/ReviewReport";
 import { RiskOfBias } from "./pages/RiskOfBias";
@@ -34,6 +35,7 @@ export default function App() {
               <Route path="/indication/:name" element={<IndicationMap />} />
               <Route path="/run" element={<RunningPipeline />} />
               <Route path="/report" element={<Report />} />
+              <Route path="/reviews/:id/screening" element={<Screening />} />
               <Route path="/reviews/:id/evidence" element={<EvidenceLedger />} />
               <Route
                 path="/reviews/:id/evidence/:trialId"

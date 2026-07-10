@@ -10,7 +10,13 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from livemeta.api.app import app, get_fetch_study, get_parse, get_store
+from livemeta.api.app import (
+    app,
+    get_fetch_study,
+    get_parse,
+    get_search_client,
+    get_store,
+)
 from livemeta.core import demo
 from livemeta.core.schema import (
     PICO,
@@ -209,6 +215,76 @@ def test_update_endpoint_adds_trial_and_returns_diff(store):
 def test_update_endpoint_404_when_no_review(store):
     r = client.post(
         "/api/reviews/does-not-exist/update", json={"new_trial_id": "NCT00000001"}
+    )
+    assert r.status_code == 404
+
+
+class _FakeSearchClient:
+    def __init__(self, nct_ids):
+        self._ids = list(nct_ids)
+
+    def search_studies(self, query, page_size=1000, interventional_only=False):
+        return [{"nct_id": nct, "title": nct} for nct in self._ids]
+
+
+def test_check_updates_endpoint_returns_only_new_trials(store):
+    _seed_seven(store)
+    # Re-search surfaces the 7 already-pooled plus the held-out eighth.
+    app.dependency_overrides[get_search_client] = lambda: _FakeSearchClient(
+        demo.GLP1_CVOT_TRIALS
+    )
+    try:
+        r = client.post("/api/reviews/glp1-mace/check-updates")
+    finally:
+        app.dependency_overrides.pop(get_search_client, None)
+
+    assert r.status_code == 200
+    ids = [c["nct_id"] for c in r.json()]
+    assert ids == [demo.GLP1_CVOT_TRIALS[7]]  # only the genuinely-new one
+
+
+def test_check_updates_endpoint_404_when_no_review(store):
+    app.dependency_overrides[get_search_client] = lambda: _FakeSearchClient([])
+    try:
+        r = client.post("/api/reviews/does-not-exist/check-updates")
+    finally:
+        app.dependency_overrides.pop(get_search_client, None)
+    assert r.status_code == 404
+
+
+def test_screening_decision_excludes_then_readmits_a_trial(store):
+    from livemeta.core.pipeline import run_review_collect
+
+    store.save_snapshot(run_review_collect(demo.GLP1_MACE_QUESTION, _fixture_fetch()))
+    target = demo.GLP1_CVOT_TRIALS[0]
+
+    # Override: exclude one trial at screening — the review re-runs and the pool drops.
+    r = client.post(
+        "/api/reviews/glp1-mace/screening/decision",
+        json={"study_id": target, "decision": "excluded", "reason": "wrong population"},
+    )
+    assert r.status_code == 200
+    body = r.json()
+    assert body["pool"]["k"] == 7
+    dec = next(d for d in body["screening"] if d["study_id"] == target)
+    assert dec["decision"] == "excluded"
+    assert dec["confirmed"] is True
+    assert dec["by_claude"] is False
+    assert target not in {s["study_id"] for s in body["pool"]["studies"]}
+
+    # Override again: re-admit it — a screened-out trial is re-fetched and re-pooled.
+    r2 = client.post(
+        "/api/reviews/glp1-mace/screening/decision",
+        json={"study_id": target, "decision": "included"},
+    )
+    assert r2.status_code == 200
+    assert r2.json()["pool"]["k"] == 8
+
+
+def test_screening_decision_404_when_no_review(store):
+    r = client.post(
+        "/api/reviews/does-not-exist/screening/decision",
+        json={"study_id": "NCT00000001", "decision": "excluded"},
     )
     assert r.status_code == 404
 

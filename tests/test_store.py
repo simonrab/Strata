@@ -8,6 +8,7 @@ from livemeta.core.schema import (
     PICO,
     CIMethod,
     EffectMeasure,
+    EligibilityDecision,
     PoolResult,
     Question,
     ReviewDecision,
@@ -108,6 +109,32 @@ def test_decisions_round_trip_and_default_empty(tmp_path):
     assert by_id["NCT01"] == "confirmed"
 
     # Decisions live alongside snapshots without clobbering the version history.
+    assert store.list_versions("q-demo") == [1]
+
+
+def test_screening_decisions_round_trip_latest_per_trial_wins(tmp_path):
+    store = SnapshotStore(tmp_path)
+    assert store.load_screening_decisions("q-demo") == []
+
+    store.save_snapshot(_review("first"))
+    store.save_screening_decision(
+        "q-demo", EligibilityDecision(study_id="NCT01", decision="excluded", by_claude=False)
+    )
+    store.save_screening_decision(
+        "q-demo", EligibilityDecision(study_id="NCT02", decision="included", by_claude=False)
+    )
+    # A later call on the same trial supersedes the earlier one.
+    store.save_screening_decision(
+        "q-demo",
+        EligibilityDecision(study_id="NCT01", decision="included", by_claude=False, confirmed=True),
+    )
+
+    decisions = {d.study_id: d for d in store.load_screening_decisions("q-demo")}
+    assert decisions["NCT01"].decision == "included"
+    assert decisions["NCT01"].confirmed is True
+    assert decisions["NCT02"].decision == "included"
+    # Screening sign-offs don't disturb other decision tables or the history.
+    assert store.load_decisions("q-demo") == []
     assert store.list_versions("q-demo") == [1]
 
 

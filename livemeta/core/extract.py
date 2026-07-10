@@ -88,7 +88,16 @@ def extract_hr(study_json: dict) -> TrialExtraction:
             ],
         )
 
-    snippet = f"{om.get('title', 'Primary outcome')}: HR {hr} ({ci_low}-{ci_high})"
+    # Capture the clinical endpoint and the compared arms from the same analysis,
+    # so the homogeneity gate can check outcome consistency and a reviewer can
+    # verify effect direction from the arms it names.
+    endpoint = om.get("title")
+    comparison_arms = _comparison_arms(om, analysis)
+
+    arms_note = f" [arms: {' vs '.join(comparison_arms)}]" if comparison_arms else ""
+    snippet = (
+        f"{om.get('title', 'Primary outcome')}: HR {hr} ({ci_low}-{ci_high}){arms_note}"
+    )
     provenance = [
         Provenance(
             trial_id=nct,
@@ -103,6 +112,8 @@ def extract_hr(study_json: dict) -> TrialExtraction:
         study_id=nct,
         label=label,
         measure=EffectMeasure.HR,
+        endpoint=endpoint,
+        comparison_arms=comparison_arms,
         hr=hr,
         ci_low=ci_low,
         ci_high=ci_high,
@@ -110,6 +121,20 @@ def extract_hr(study_json: dict) -> TrialExtraction:
         provenance=provenance,
         assumptions=point.assumptions,
     )
+
+
+def _comparison_arms(om: dict, analysis: dict) -> list[str]:
+    """The arm labels this ratio compares, in the order CT.gov lists them.
+
+    Surfaced for human verification of effect direction. Deliberately NOT read as
+    numerator/denominator: CT.gov's `groupIds` order is not a reliable
+    treatment-vs-comparator signal — several GLP-1 CVOTs list placebo first while
+    still reporting a conventional drug-vs-placebo hazard ratio — so orientation is
+    a reviewer's call, not a value we infer from group order.
+    """
+    titles = {g.get("id"): g.get("title") for g in om.get("groups", [])}
+    gids = analysis.get("groupIds") or []
+    return [titles[g] for g in gids if titles.get(g)]
 
 
 # --- Binary (2x2) and continuous (mean/SD/n) extraction ---------------------

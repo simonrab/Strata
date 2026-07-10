@@ -99,6 +99,14 @@ function DownArrow() {
 
 export function PrismaFlowView({ flow }: { flow: PrismaFlow }) {
   const src = sourceLine(flow.identified_by_source);
+  // PRISMA 2020 separates the two exclusion kinds: a clinical eligibility screen
+  // (population/intervention/comparator/design) vs a report that cleared screening
+  // but had no usable effect data. Branch them off different stages of the spine.
+  const screeningExclusions = flow.excluded.filter((e) => e.stage === "screening");
+  const reportExclusions = flow.excluded.filter((e) => e.stage !== "screening");
+  const sum = (es: { count: number }[]) => es.reduce((s, e) => s + e.count, 0);
+  const asReasons = (es: { reason: string; count: number }[]) =>
+    es.map((e) => ({ reason: e.reason, count: e.count }));
   return (
     <section className="rounded-md hairline bg-card-light p-6" aria-label="PRISMA flow">
       <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
@@ -131,8 +139,19 @@ export function PrismaFlowView({ flow }: { flow: PrismaFlow }) {
         <Stage
           box={<StageBox n={flow.screened} label="Records screened" />}
           removed={
-            flow.not_retrieved > 0 ? (
-              <RemovedCard title="Reports not retrieved" n={flow.not_retrieved} />
+            flow.not_retrieved > 0 || screeningExclusions.length > 0 ? (
+              <div className="flex flex-col gap-3">
+                {flow.not_retrieved > 0 && (
+                  <RemovedCard title="Reports not retrieved" n={flow.not_retrieved} />
+                )}
+                {screeningExclusions.length > 0 && (
+                  <RemovedCard
+                    title="Excluded — clinical eligibility"
+                    n={sum(screeningExclusions)}
+                    reasons={asReasons(screeningExclusions)}
+                  />
+                )}
+              </div>
             ) : undefined
           }
         />
@@ -141,11 +160,11 @@ export function PrismaFlowView({ flow }: { flow: PrismaFlow }) {
         <Stage
           box={<StageBox n={flow.assessed} label="Reports assessed for eligibility" />}
           removed={
-            flow.excluded.length > 0 ? (
+            reportExclusions.length > 0 ? (
               <RemovedCard
-                title="Records excluded"
-                n={flow.excluded.reduce((s, e) => s + e.count, 0)}
-                reasons={flow.excluded.map((e) => ({ reason: e.reason, count: e.count }))}
+                title="Excluded — no usable data"
+                n={sum(reportExclusions)}
+                reasons={asReasons(reportExclusions)}
               />
             ) : undefined
           }

@@ -70,7 +70,7 @@ export function CompetitorLandscape() {
         <div>
           <h1 className="font-sans text-display-lg text-ink-light">Competitive Landscape</h1>
           <p className="mt-1 font-serif text-[16px] text-ink-muted-light">
-            Which assets are where in development — joined to the living pooled evidence for each.
+            Which assets are where in development, joined to the living pooled evidence for each.
           </p>
         </div>
       </div>
@@ -166,7 +166,7 @@ export function CompetitorLandscape() {
                         {cell ? (
                           <Cell cell={cell} condition={condition} />
                         ) : (
-                          <span className="text-[12px] text-outline-variant">—</span>
+                          <span className="text-[12px] text-outline-variant">n/a</span>
                         )}
                       </td>
                     );

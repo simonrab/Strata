@@ -98,6 +98,10 @@ export interface TrialExtraction {
   study_id: string;
   label: string;
   measure: string;
+  // Clinical endpoint the effect measures, and the arms CT.gov compared (in its
+  // listed order; surfaced for human verification, not read as orientation).
+  endpoint?: string | null;
+  comparison_arms?: string[];
   hr: number | null;
   ci_low: number | null;
   ci_high: number | null;
@@ -133,6 +137,19 @@ export interface ReviewDecision {
   decision: "confirmed" | "flagged";
   reason?: string | null;
   timestamp?: string | null;
+}
+
+// livemeta.core.schema.EligibilityDecision — one candidate's search -> screen ->
+// include call. `by_claude` is false when the clinical read didn't run (keyless
+// or failed): the trial was auto-included in reduced mode, never silently.
+export interface EligibilityDecision {
+  study_id: string;
+  decision: "included" | "excluded";
+  reason: string;
+  domain?: string | null;
+  quote?: Provenance | null;
+  by_claude: boolean;
+  confirmed: boolean;
 }
 
 export type RobJudgment = "low" | "some_concerns" | "high" | "pending";
@@ -196,6 +213,9 @@ export interface DiversityAssessment {
   i2_band: string;
   requires_confirmation: boolean;
   confirmed: boolean;
+  // False when the clinical read didn't run (no model key): the gate rested on
+  // the I² band alone, and the UI should show that reduced coverage honestly.
+  clinical_assessed?: boolean;
   rationale: string;
 }
 
@@ -219,6 +239,14 @@ export interface ReviewSummary {
   ci_high: number | null;
   measure: string;
   status: string;
+}
+
+// livemeta.core.schema.TrialCandidate — a trial surfaced by search, before
+// extraction (used by the on-demand living "check for new trials").
+export interface TrialCandidate {
+  nct_id: string;
+  title: string;
+  source?: string;
 }
 
 export interface PICO {
@@ -246,6 +274,9 @@ export interface PrismaExclusion {
   reason: string;
   count: number;
   study_ids: string[];
+  // "screening" = a clinical PICO/design eligibility call; "reports" = cleared
+  // screening but had no extractable/valid effect data.
+  stage?: "screening" | "reports";
 }
 
 // PRISMA 2020 record-flow, derived deterministically from the run. Mirrors
@@ -267,6 +298,7 @@ export interface PrismaFlow {
 
 export interface ReviewResult {
   question: Question;
+  screening?: EligibilityDecision[];
   extractions: TrialExtraction[];
   validations: ValidationResult[];
   pool: PoolResult | null;

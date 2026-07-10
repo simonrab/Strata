@@ -154,6 +154,16 @@ class TrialExtraction(BaseModel):
     study_id: str  # e.g. NCT id
     label: str
     measure: EffectMeasure = EffectMeasure.HR
+    # The clinical endpoint this effect measures (e.g. "3-point MACE"), captured
+    # structurally so the homogeneity gate can check that pooled trials share an
+    # outcome rather than combining, say, a MACE HR with an all-cause-mortality HR.
+    endpoint: str | None = None
+    # The two arms this ratio compares, in the order CT.gov lists them. Surfaced
+    # for human verification of effect direction — NOT treated as authoritative
+    # numerator/denominator, because CT.gov's stored group order is not a reliable
+    # treatment-vs-comparator signal (e.g. several GLP-1 CVOTs list placebo first
+    # while still reporting a conventional drug-vs-placebo HR).
+    comparison_arms: list[str] = Field(default_factory=list)
     hr: float | None = None
     ci_low: float | None = None
     ci_high: float | None = None
@@ -181,6 +191,27 @@ class ReviewDecision(BaseModel):
     timestamp: str | None = None
 
 
+class EligibilityDecision(BaseModel):
+    """One candidate trial's search -> screen -> include eligibility call.
+
+    The systematic-review screening step the demo used to fake with curation:
+    each candidate is judged include/exclude against the question's PICO before
+    any extraction. `by_claude` records whether the clinical judgment ran (False
+    when keyless — the trial was auto-included in reduced mode, never silently);
+    `quote` carries the source snippet a Claude judgment rests on, the same
+    audit-trail discipline as an extracted number. A reviewer can `confirm` or
+    override, mirroring `ReviewDecision`.
+    """
+
+    study_id: str
+    decision: str  # "included" | "excluded"
+    reason: str = ""
+    domain: str | None = None  # population | intervention | comparator | outcome | design
+    quote: Provenance | None = None
+    by_claude: bool = False
+    confirmed: bool = False
+
+
 class DiversityDomain(BaseModel):
     """One PICO domain's clinical-diversity judgment across the pooled trials."""
 
@@ -204,6 +235,10 @@ class DiversityAssessment(BaseModel):
     i2_band: str = ""
     requires_confirmation: bool = False
     confirmed: bool = False
+    # False when the clinical-diversity read did not run (no model key): the gate
+    # then rests on the I² band alone, and the UI must show that reduced coverage
+    # honestly rather than implying a full four-domain clinical screen ran.
+    clinical_assessed: bool = True
     rationale: str = ""
 
 
@@ -373,24 +408,29 @@ class PrismaExclusion(BaseModel):
 
     `study_ids` keeps the exclusion traceable — the same audit-trail discipline as
     an extracted number: a reviewer can see exactly which records each reason
-    removed, not just an aggregate count.
+    removed, not just an aggregate count. `stage` separates the two PRISMA-2020
+    exclusion kinds: "screening" for a clinical PICO/design eligibility call, and
+    "reports" for a trial that cleared screening but had no extractable/valid
+    effect data.
     """
 
     reason: str
     count: int
     study_ids: list[str] = Field(default_factory=list)
+    stage: str = "reports"  # "screening" (clinical eligibility) | "reports" (data)
 
 
 class PrismaFlow(BaseModel):
     """A PRISMA 2020 record-flow, derived deterministically from the pipeline stages.
 
     Honest by construction: every count comes from what the pipeline actually did —
-    identification via search, de-duplication, retrieval, effect-data extraction /
-    eligibility, and inclusion in the synthesis. There is no separate clinical
-    population/comparator screening stage in the pipeline, so none is invented; the
-    exclusions are the real reasons trials did not reach the pool. The funnel is
-    internally consistent: identified = screened + duplicates_removed; screened =
-    assessed + not_retrieved; assessed = included + sum(excluded counts).
+    identification via search, de-duplication, retrieval, clinical eligibility
+    screening against the question's PICO, effect-data extraction, validation, and
+    inclusion in the synthesis. The exclusions are the real reasons trials did not
+    reach the pool (an ineligible population/intervention/comparator/design, or no
+    extractable effect data / failed validation). The funnel is internally
+    consistent: identified = screened + duplicates_removed; screened = assessed +
+    not_retrieved; assessed = included + sum(excluded counts).
     """
 
     # Identification
@@ -412,6 +452,7 @@ class ReviewResult(BaseModel):
     """The complete, auditable output of one review run."""
 
     question: Question
+    screening: list[EligibilityDecision] = Field(default_factory=list)
     extractions: list[TrialExtraction] = Field(default_factory=list)
     validations: list[ValidationResult] = Field(default_factory=list)
     pool: PoolResult | None = None

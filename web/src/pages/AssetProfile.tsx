@@ -77,7 +77,7 @@ export function AssetProfile() {
                   </span>
                 </div>
                 <p className="mt-1 text-[14px] text-ink-light">
-                  {eventLabel(e)} — {PHASE_LABEL[e.phase]} for {e.indication}
+                  {eventLabel(e)} · {PHASE_LABEL[e.phase]} for {e.indication}
                 </p>
                 <div className="mt-1">
                   <ProvenancePopover provenance={e.provenance} />

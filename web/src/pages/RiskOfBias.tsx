@@ -127,7 +127,7 @@ export function RiskOfBias() {
 
       {pending && (
         <p className="rounded-sm hairline bg-surface-container-low px-4 py-3 font-mono text-[12px] text-ink-muted-light">
-          Not yet assessed — risk-of-bias judgments require the model
+          Not yet assessed. Risk-of-bias judgments require the model
           (ANTHROPIC_API_KEY not configured). We abstain rather than fabricate a
           judgment.
         </p>
@@ -157,10 +157,10 @@ export function RiskOfBias() {
                 <Dot judgment={d.judgment} />
               </div>
               <div className="col-span-4 text-[13px] text-ink-light">
-                {d.rationale || <span className="text-ink-muted-light">—</span>}
+                {d.rationale || <span className="text-ink-muted-light">n/a</span>}
               </div>
               <div className="col-span-3 border-l-2 border-hairline-light pl-3 font-serif text-[13px] italic text-ink-muted-light">
-                {d.source_quote?.snippet ? `"${d.source_quote.snippet}"` : "—"}
+                {d.source_quote?.snippet ? `"${d.source_quote.snippet}"` : "n/a"}
               </div>
               <div className="col-span-1 flex justify-end">
                 {d.confirmed ? (

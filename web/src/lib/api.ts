@@ -13,6 +13,7 @@ import type {
   ReviewSummary,
   SnapshotMeta,
   Source,
+  TrialCandidate,
 } from "./types";
 
 // In production the backend lives on a different origin (Railway); VITE_API_URL
@@ -89,11 +90,32 @@ export async function postRobDecision(
   );
 }
 
+export async function postScreeningDecision(
+  id: string,
+  decision: { study_id: string; decision: "included" | "excluded"; reason?: string | null }
+): Promise<ReviewResult> {
+  return json<ReviewResult>(
+    await fetch(apiUrl(`/api/reviews/${encodeURIComponent(id)}/screening/decision`), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(decision),
+    })
+  );
+}
+
 // --- Living layer: inject a trial, read the version history ------------------
 
 export async function seedDemo(): Promise<ReviewResult> {
   return json<ReviewResult>(
     await fetch(apiUrl("/api/reviews/demo/seed"), { method: "POST" })
+  );
+}
+
+export async function checkUpdates(id: string): Promise<TrialCandidate[]> {
+  return json<TrialCandidate[]>(
+    await fetch(apiUrl(`/api/reviews/${encodeURIComponent(id)}/check-updates`), {
+      method: "POST",
+    })
   );
 }
 

@@ -34,15 +34,25 @@ class ClinicalTrialsClient:
         resp.raise_for_status()
         return resp.json()
 
-    def search_studies(self, query: str, page_size: int = 1000) -> list[dict]:
-        """Search by free-text term; return [{nct_id, title}]."""
+    def search_studies(
+        self, query: str, page_size: int = 1000, interventional_only: bool = False
+    ) -> list[dict]:
+        """Search by free-text term; return [{nct_id, title}].
+
+        `interventional_only` adds the CT.gov v2 advanced filter
+        `AREA[StudyType]INTERVENTIONAL`, the first deterministic screen: it keeps
+        observational records out of a systematic-review candidate set at the API.
+        """
+        params = {
+            "query.term": query,
+            "pageSize": page_size,
+            "fields": "protocolSection.identificationModule",
+        }
+        if interventional_only:
+            params["filter.advanced"] = "AREA[StudyType]INTERVENTIONAL"
         resp = httpx.get(
             f"{self._base}/studies",
-            params={
-                "query.term": query,
-                "pageSize": page_size,
-                "fields": "protocolSection.identificationModule",
-            },
+            params=params,
             headers=_HEADERS,
             timeout=self._timeout,
         )

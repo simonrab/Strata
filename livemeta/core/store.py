@@ -16,7 +16,13 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from .ci.schema import DevelopmentEvent, RegulatoryApproval, SubPopulation
-from .schema import ReviewDecision, ReviewResult, RobDecision, SnapshotMeta
+from .schema import (
+    EligibilityDecision,
+    ReviewDecision,
+    ReviewResult,
+    RobDecision,
+    SnapshotMeta,
+)
 
 _DEFAULT_DIR = ".livemeta_data"
 _DB_NAME = "livemeta.db"
@@ -83,6 +89,13 @@ class SnapshotStore:
                     decision_json TEXT NOT NULL,
                     updated_at    TEXT NOT NULL,
                     PRIMARY KEY (question_id, study_id, domain_key)
+                );
+                CREATE TABLE IF NOT EXISTS screening_decisions (
+                    question_id   TEXT NOT NULL,
+                    study_id      TEXT NOT NULL,
+                    decision_json TEXT NOT NULL,
+                    updated_at    TEXT NOT NULL,
+                    PRIMARY KEY (question_id, study_id)
                 );
                 CREATE TABLE IF NOT EXISTS development_events (
                     landscape_id TEXT NOT NULL,
@@ -265,6 +278,36 @@ class SnapshotStore:
                 (question_id,),
             ).fetchall()
         return [RobDecision.model_validate_json(r["decision_json"]) for r in rows]
+
+    def save_screening_decision(
+        self, question_id: str, decision: EligibilityDecision
+    ) -> None:
+        """Record a human include/exclude sign-off on one trial's eligibility.
+
+        The reviewer's authoritative call: the latest per trial wins, and it is
+        replayed as an override when the review is re-run so the decision sticks.
+        """
+        with closing(self._connect()) as conn, conn:
+            conn.execute(
+                """
+                INSERT INTO screening_decisions
+                    (question_id, study_id, decision_json, updated_at)
+                VALUES (?, ?, ?, ?)
+                ON CONFLICT(question_id, study_id)
+                DO UPDATE SET decision_json = excluded.decision_json,
+                              updated_at = excluded.updated_at
+                """,
+                (question_id, decision.study_id, decision.model_dump_json(), _now()),
+            )
+
+    def load_screening_decisions(self, question_id: str) -> list[EligibilityDecision]:
+        with closing(self._connect()) as conn:
+            rows = conn.execute(
+                "SELECT decision_json FROM screening_decisions WHERE question_id = ? "
+                "ORDER BY study_id",
+                (question_id,),
+            ).fetchall()
+        return [EligibilityDecision.model_validate_json(r["decision_json"]) for r in rows]
 
     # --- competitive-intelligence: events + evidence links -------------------
 

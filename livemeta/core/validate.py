@@ -23,6 +23,13 @@ import math
 # A reported percentage is a rounded figure; allow half a point of slack.
 _PCT_TOLERANCE = 0.5
 
+# Plausibility bounds for a ratio effect. Real clinical hazard/risk/odds ratios
+# sit well inside these; a value outside them (or a CI spanning >100x) signals a
+# data-entry or unit error, not a real effect — flag for review rather than pool.
+_MAX_PLAUSIBLE_RATIO = 20.0
+_MIN_PLAUSIBLE_RATIO = 0.05
+_MAX_CI_WIDTH_RATIO = 100.0
+
 
 def _check_arm(study_id: str, arm: BinaryArm, which: str) -> list[ValidationIssue]:
     issues: list[ValidationIssue] = []
@@ -111,6 +118,29 @@ def validate_ratio(extractions: Sequence[TrialExtraction]) -> list[ValidationRes
                         study_id=e.study_id,
                         code="ci_not_ordered",
                         message=f"CI {e.ci_low}-{e.ci_high} does not bracket HR {e.hr}.",
+                    )
+                )
+            if e.hr > _MAX_PLAUSIBLE_RATIO or (0 < e.hr < _MIN_PLAUSIBLE_RATIO):
+                issues.append(
+                    ValidationIssue(
+                        study_id=e.study_id,
+                        code="implausible_ratio",
+                        message=(
+                            f"Ratio {e.hr} is outside the plausible range "
+                            f"[{_MIN_PLAUSIBLE_RATIO}, {_MAX_PLAUSIBLE_RATIO}] — "
+                            "likely a data or unit error."
+                        ),
+                    )
+                )
+            if e.ci_low > 0 and e.ci_high / e.ci_low > _MAX_CI_WIDTH_RATIO:
+                issues.append(
+                    ValidationIssue(
+                        study_id=e.study_id,
+                        code="implausible_ci_width",
+                        message=(
+                            f"CI spans {e.ci_high / e.ci_low:.0f}x "
+                            f"({e.ci_low}-{e.ci_high}) — implausibly wide."
+                        ),
                     )
                 )
         results.append(

@@ -129,6 +129,25 @@ def test_extract_leader_primary_mace_hr():
     assert ext.provenance[0].trial_id == "NCT01179048"
 
 
+def test_extract_captures_endpoint_and_comparison_arms():
+    # The clinical endpoint (for the outcome-consistency gate) and the compared
+    # arms (for human verification of effect direction) are captured structurally.
+    ext = extract_hr(_load("NCT01179048"))
+    assert ext.endpoint and "Cardiovascular Death" in ext.endpoint
+    assert ext.comparison_arms == ["Liraglutide", "Placebo"]
+    # The arms are also surfaced in the provenance snippet for the ledger.
+    assert "Liraglutide vs Placebo" in ext.provenance[0].snippet
+
+
+def test_extract_comparison_arms_follow_ctgov_order_not_orientation():
+    # CT.gov lists placebo first for ELIXA even though the HR is reported
+    # conventionally — we record the arms as-listed and never infer direction from
+    # their order (that is a reviewer's call).
+    ext = extract_hr(_load("NCT01147250"))
+    assert ext.comparison_arms == ["Placebo", "Lixisenatide"]
+    assert not ext.flagged  # order alone must not fail extraction
+
+
 def test_extract_sustain6_primary_mace_hr():
     ext = extract_hr(_load("NCT01720446"))
     assert not ext.flagged

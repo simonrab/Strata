@@ -11,45 +11,49 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Canvas & cards (Level 0 / Level 1)
-        canvas: { light: "#f9f9f9", dark: "#000000" },
-        card: { light: "#ffffff", dark: "#0e0f0f" },
-        hairline: { light: "#e5e5e5", dark: "#26282b" },
-        // Ink
-        ink: { light: "#1a1c1c", dark: "#f1f1f1" },
-        "ink-muted": { light: "#434747", dark: "#b4b2a9" },
+        // All colours resolve to the CSS-variable token layer in index.css so
+        // the app themes light/dark by flipping one set of variables. The
+        // light/dark object shape is kept so existing class names still work
+        // (bg-canvas-light, …); both point at the same themed variable.
+        canvas: { light: "var(--canvas)", dark: "var(--canvas)" },
+        card: { light: "var(--card)", dark: "var(--card)" },
+        hairline: { light: "var(--hairline)", dark: "var(--hairline)" },
+        ink: { light: "var(--ink)", dark: "var(--ink)" },
+        "ink-muted": { light: "var(--ink-muted)", dark: "var(--ink-muted)" },
         // Accent — interaction cues only
-        accent: "#2563eb",
-        "accent-container": "#eff6ff",
-        "accent-border": "#bfdbfe",
-        "on-accent-container": "#1e3a8a",
-        // Material tokens (from DESIGN.md front-matter)
-        surface: "#f9f9f9",
-        "surface-container-lowest": "#ffffff",
-        "surface-container-low": "#f3f3f3",
-        "surface-container": "#eeeeee",
-        "surface-container-high": "#e8e8e8",
-        "surface-container-highest": "#e2e2e2",
-        "on-surface": "#1a1c1c",
-        "on-surface-variant": "#434747",
-        outline: "#747878",
-        "outline-variant": "#c4c7c7",
-        primary: "#000000",
-        "on-primary": "#ffffff",
-        secondary: "#0051d5",
+        accent: "var(--accent)",
+        "accent-container": "var(--accent-container)",
+        "accent-border": "var(--accent-border)",
+        "on-accent-container": "var(--on-accent-container)",
+        // Tonal surfaces
+        surface: "var(--canvas)",
+        "surface-container-lowest": "var(--card)",
+        "surface-container-low": "var(--sunk)",
+        "surface-container": "var(--surface-container)",
+        "surface-container-high": "var(--surface-container-high)",
+        "surface-container-highest": "var(--surface-container-highest)",
+        "on-surface": "var(--ink)",
+        "on-surface-variant": "var(--ink-muted)",
+        outline: "var(--outline)",
+        "outline-variant": "var(--outline-variant)",
+        primary: "var(--primary)",
+        "on-primary": "var(--on-primary)",
+        secondary: "var(--secondary)",
         // Semantic — RoB / certainty only, always paired with a label
-        "risk-low": "#15803d",
-        "risk-some": "#b45309",
-        "risk-high": "#ba1a1a",
-        "risk-low-container": "#dcfce7",
-        "risk-some-container": "#fef3c7",
-        "risk-high-container": "#fee2e2",
-        error: "#ba1a1a",
+        "risk-low": "var(--risk-low)",
+        "risk-some": "var(--risk-some)",
+        "risk-high": "var(--risk-high)",
+        "risk-low-container": "var(--risk-low-container)",
+        "risk-some-container": "var(--risk-some-container)",
+        "risk-high-container": "var(--risk-high-container)",
+        error: "var(--risk-high)",
       },
       fontFamily: {
         sans: ["Inter", "system-ui", "sans-serif"],
         mono: ["'JetBrains Mono'", "ui-monospace", "monospace"],
-        serif: ["'Source Serif 4'", "Georgia", "serif"],
+        // Serif is retired in the Meridian direction; mapped to the sans stack
+        // so any lingering `font-serif` renders as Inter, not a display face.
+        serif: ["Inter", "system-ui", "sans-serif"],
       },
       fontSize: {
         "display-xl": ["40px", { lineHeight: "1.1", letterSpacing: "-0.02em", fontWeight: "500" }],

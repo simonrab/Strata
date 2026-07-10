@@ -81,22 +81,37 @@ def _unjudged_domains() -> list[DiversityDomain]:
     ]
 
 
-def _trial_digest(question: Question, studies: Sequence[dict]) -> str:
-    """A compact description of the trials for the clinical-diversity judgment."""
+def _trial_digest(
+    question: Question,
+    studies: Sequence[dict],
+    extractions: Sequence[TrialExtraction] = (),
+) -> str:
+    """A compact description of the trials for the clinical-diversity judgment.
+
+    Includes each trial's *extracted* clinical endpoint so the outcome-domain
+    judgment is grounded in what was actually pooled — the guard against combining,
+    say, a MACE hazard ratio with an all-cause-mortality one.
+    """
+    endpoints = {e.study_id: e.endpoint for e in extractions if e.endpoint}
     lines = [f"Question PICO: {question.pico.model_dump()}"]
     for s in studies:
         ident = s.get("protocolSection", {}).get("identificationModule", {})
         elig = s.get("protocolSection", {}).get("eligibilityModule", {})
+        nct = ident.get("nctId", ident.get("id", "?"))
         lines.append(
-            f"- {ident.get('nctId', ident.get('id', '?'))}: "
-            f"{ident.get('briefTitle', '')} | "
+            f"- {nct}: {ident.get('briefTitle', '')} | "
             f"eligibility: {str(elig.get('eligibilityCriteria', ''))[:300]}"
         )
+    for sid, endpoint in endpoints.items():
+        lines.append(f"- {sid} extracted endpoint: {endpoint}")
     return "\n".join(lines)
 
 
 def _clinical_domains(
-    question: Question, studies: Sequence[dict], client
+    question: Question,
+    studies: Sequence[dict],
+    client,
+    extractions: Sequence[TrialExtraction] = (),
 ) -> list[DiversityDomain]:
     try:
         model = os.environ.get("LIVEMETA_LLM_MODEL", _DEFAULT_MODEL)
@@ -104,7 +119,9 @@ def _clinical_domains(
             model=model,
             max_tokens=1024,
             system=_SYSTEM_HINT,
-            messages=[{"role": "user", "content": _trial_digest(question, studies)}],
+            messages=[
+                {"role": "user", "content": _trial_digest(question, studies, extractions)}
+            ],
             output_format=_DiversityJudged,
         ).parsed_output
     except Exception:
@@ -142,7 +159,12 @@ def assess_diversity(
     band = interpret_i2(i2)
 
     client = _resolve_client(llm_client)
-    domains = _clinical_domains(question, studies, client) if client else _unjudged_domains()
+    clinical_assessed = client is not None
+    domains = (
+        _clinical_domains(question, studies, client, extractions)
+        if client
+        else _unjudged_domains()
+    )
 
     stat_gate = band in _GATING_BANDS
     clinical_gate = any(d.judgment == "divergent" for d in domains)
@@ -158,10 +180,19 @@ def assess_diversity(
         rationale = (
             "Pooling withheld for confirmation because " + "; ".join(reasons) + "."
         )
-    else:
+    elif clinical_assessed:
         rationale = (
             f"Trials are similar enough to pool: heterogeneity is {band} "
             f"(I² = {i2:.0f}%) and no PICO domain is divergent."
+        )
+    else:
+        # Honest degradation: no key, so the four clinical domains were not
+        # assessed. The gate rested on the I² band alone — say so rather than
+        # imply a full clinical-diversity screen ran.
+        rationale = (
+            f"Statistical heterogeneity is {band} (I² = {i2:.0f}%). Clinical "
+            "diversity was not assessed (no model key) — the gate rests on the I² "
+            "band alone; confirm clinical combinability manually."
         )
 
     return DiversityAssessment(
@@ -170,5 +201,6 @@ def assess_diversity(
         i2_band=band,
         requires_confirmation=requires,
         confirmed=False,
+        clinical_assessed=clinical_assessed,
         rationale=rationale,
     )
