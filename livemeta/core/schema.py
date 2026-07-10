@@ -368,6 +368,46 @@ class PipelineEvent(BaseModel):
     data: dict | None = None
 
 
+class PrismaExclusion(BaseModel):
+    """One eligibility-exclusion bucket in the PRISMA flow: why trials were dropped.
+
+    `study_ids` keeps the exclusion traceable — the same audit-trail discipline as
+    an extracted number: a reviewer can see exactly which records each reason
+    removed, not just an aggregate count.
+    """
+
+    reason: str
+    count: int
+    study_ids: list[str] = Field(default_factory=list)
+
+
+class PrismaFlow(BaseModel):
+    """A PRISMA 2020 record-flow, derived deterministically from the pipeline stages.
+
+    Honest by construction: every count comes from what the pipeline actually did —
+    identification via search, de-duplication, retrieval, effect-data extraction /
+    eligibility, and inclusion in the synthesis. There is no separate clinical
+    population/comparator screening stage in the pipeline, so none is invented; the
+    exclusions are the real reasons trials did not reach the pool. The funnel is
+    internally consistent: identified = screened + duplicates_removed; screened =
+    assessed + not_retrieved; assessed = included + sum(excluded counts).
+    """
+
+    # Identification
+    identified: int
+    identified_by_source: dict[str, int] = Field(default_factory=dict)
+    duplicates_removed: int = 0
+    # Screening
+    screened: int
+    not_retrieved: int = 0
+    assessed: int  # reports assessed for eligibility (= screened - not_retrieved)
+    excluded: list[PrismaExclusion] = Field(default_factory=list)
+    # Included
+    included: int  # studies that passed validation (eligible for synthesis)
+    included_in_synthesis: int  # in the meta-analysis pool (pool.k; 0 if withheld/abstained)
+    synthesis_note: str = ""  # why included != included_in_synthesis, when they differ
+
+
 class ReviewResult(BaseModel):
     """The complete, auditable output of one review run."""
 
@@ -380,6 +420,7 @@ class ReviewResult(BaseModel):
     grade: GradeAssessment | None = None
     sensitivity: list[LeaveOneOutRow] = Field(default_factory=list)
     diversity: DiversityAssessment | None = None
+    prisma: PrismaFlow | None = None
 
 
 class TrialCandidate(BaseModel):

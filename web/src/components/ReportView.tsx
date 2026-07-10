@@ -1,4 +1,5 @@
 import { ForestPlot } from "./ForestPlot";
+import { PrismaFlowView } from "./PrismaFlow";
 import { ProvenancePopover } from "./ProvenancePopover";
 import { Icon } from "./Icon";
 import type { GradeRating, ReviewResult } from "../lib/types";
@@ -24,9 +25,12 @@ const CERTAINTY: Record<GradeRating, { dots: number; dot: string; label: string 
 export function ReportView({ result }: { result: ReviewResult }) {
   if (!result.pool) {
     return (
-      <p className="font-mono text-[13px] text-ink-muted-light">
-        Too few valid trials to pool — abstaining. {result.summary}
-      </p>
+      <div className="space-y-6">
+        <p className="font-mono text-[13px] text-ink-muted-light">
+          Too few valid trials to pool. Abstaining. {result.summary}
+        </p>
+        {result.prisma && <PrismaFlowView flow={result.prisma} />}
+      </div>
     );
   }
   const { pool, summary, extractions, grade, sensitivity } = result;
@@ -58,7 +62,7 @@ export function ReportView({ result }: { result: ReviewResult }) {
             </div>
           </div>
 
-          <p className="mt-5 font-serif text-clinical-conclusion text-ink-light">{summary}</p>
+          <p className="mt-5 text-clinical-conclusion font-medium text-ink-light">{summary}</p>
 
           <div className="mt-6 grid grid-cols-1 gap-px overflow-hidden rounded-md hairline bg-hairline-light sm:grid-cols-2">
             <div className="bg-card-light p-4">
@@ -69,7 +73,7 @@ export function ReportView({ result }: { result: ReviewResult }) {
                 {pool.estimate.toFixed(2)}
               </p>
               <p className="mt-1 font-mono text-[13px] text-ink-muted-light">
-                95% CI {pool.ci_low.toFixed(2)}–{pool.ci_high.toFixed(2)} ·{" "}
+                95% CI [{pool.ci_low.toFixed(2)}, {pool.ci_high.toFixed(2)}] ·{" "}
                 {pool.ci_method.toUpperCase()}
               </p>
             </div>
@@ -117,7 +121,7 @@ export function ReportView({ result }: { result: ReviewResult }) {
               {(pool.assumptions ?? []).map((a, i) => (
                 <li key={i} className="flex gap-2 font-mono text-[12px] text-ink-muted-light">
                   <span className="shrink-0 rounded-sm hairline bg-surface-container px-1.5 py-0.5 text-[10px] uppercase text-ink-light">
-                    {a.study_id ?? "—"}
+                    {a.study_id ?? "n/a"}
                   </span>
                   <span>{a.detail}</span>
                 </li>
@@ -162,7 +166,8 @@ export function ReportView({ result }: { result: ReviewResult }) {
                         </td>
                         <td className="py-2 text-right">
                           {flips ? (
-                            <span className="rounded-full bg-risk-some-container px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-risk-some">
+                            <span className="inline-flex items-center gap-1.5 rounded-full border border-risk-some px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-risk-some">
+                              <span className="h-1.5 w-1.5 rounded-full bg-risk-some" />
                               Conclusion flips
                             </span>
                           ) : (
@@ -177,6 +182,9 @@ export function ReportView({ result }: { result: ReviewResult }) {
             </div>
           </section>
         )}
+
+        {/* PRISMA flow — how the search narrowed to the pooled set */}
+        {result.prisma && <PrismaFlowView flow={result.prisma} />}
       </div>
 
       {/* Provenance rail */}

@@ -242,6 +242,29 @@ export interface ValidationResult {
   issues: { study_id: string; code: string; message: string }[];
 }
 
+export interface PrismaExclusion {
+  reason: string;
+  count: number;
+  study_ids: string[];
+}
+
+// PRISMA 2020 record-flow, derived deterministically from the run. Mirrors
+// livemeta.core.schema.PrismaFlow. Reconciles: identified = screened +
+// duplicates_removed; screened = assessed + not_retrieved; assessed = included +
+// sum(excluded counts).
+export interface PrismaFlow {
+  identified: number;
+  identified_by_source: Record<string, number>;
+  duplicates_removed: number;
+  screened: number;
+  not_retrieved: number;
+  assessed: number;
+  excluded: PrismaExclusion[];
+  included: number;
+  included_in_synthesis: number;
+  synthesis_note: string;
+}
+
 export interface ReviewResult {
   question: Question;
   extractions: TrialExtraction[];
@@ -252,6 +275,7 @@ export interface ReviewResult {
   grade: GradeAssessment | null;
   sensitivity: LeaveOneOutRow[];
   diversity?: DiversityAssessment | null;
+  prisma?: PrismaFlow | null;
 }
 
 export interface PipelineEvent {

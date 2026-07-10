@@ -29,6 +29,7 @@ from .sources.router import SourceRouter
 from .stats import engine as stats_engine
 from .stats import sensitivity as sensitivity_mod
 from . import extract as extract_mod
+from . import prisma as prisma_mod
 from . import rob as rob_mod
 from . import validate as validate_mod
 
@@ -89,6 +90,17 @@ def _pool_inputs(
     return [e.point for e in passed if e.point]
 
 
+def _finalize(result: ReviewResult) -> ReviewResult:
+    """Attach the deterministic PRISMA record-flow to a terminal review.
+
+    Every review that reaches a `done`/return path gets its flow diagram built
+    from its own extractions and validations, so the audit trail and the report
+    can always account for how the search narrowed to the pooled set.
+    """
+    result.prisma = prisma_mod.build_prisma(result)
+    return result
+
+
 def interpret_i2(i2: float) -> str:
     """Cochrane interpretation bands (avoid rigid thresholds)."""
     if i2 <= 40:
@@ -98,6 +110,16 @@ def interpret_i2(i2: float) -> str:
     if i2 <= 90:
         return "substantial"
     return "considerable"
+
+
+def heterogeneity_clause(i2: float) -> str:
+    """A grammatical clause about heterogeneity for prose summaries. The lowest
+    Cochrane band ("might not be important") is a hedge, not an adjective, so it
+    can't follow "was"; the other bands read naturally as "was <band>"."""
+    band = interpret_i2(i2)
+    if i2 <= 40:
+        return "heterogeneity might not be important"
+    return f"heterogeneity was {band}"
 
 
 def pool_direction(pool: PoolResult) -> str:
@@ -123,13 +145,13 @@ def summarize(question: Question, pool: PoolResult) -> str:
     ]
     significant = pool_significant(pool)
     strength = "a statistically significant" if significant else "no statistically significant"
-    interp = interpret_i2(pool.i2)
+    clause = heterogeneity_clause(pool.i2)
     ci_kind = "Hartung-Knapp" if pool.ci_method.value == "hksj" else "Wald"
     return (
         f"Pooling {pool.k} trials, {question.pico.intervention} {direction} "
         f"{question.pico.outcome} versus {question.pico.comparator}, with {strength} "
-        f"effect: {measure} {est:.2f} (95% CI {lo:.2f}-{hi:.2f}, {ci_kind}). "
-        f"Heterogeneity was {interp} (I² = {pool.i2:.0f}%, τ² = {pool.tau2:.3f})."
+        f"effect: {measure} {est:.2f} (95% CI {lo:.2f} to {hi:.2f}, {ci_kind}). "
+        f"{clause.capitalize()} (I² = {pool.i2:.0f}%, τ² = {pool.tau2:.3f})."
     )
 
 
@@ -235,8 +257,10 @@ def run_review(
         yield PipelineEvent(
             stage="done",
             message="Too few valid trials to pool — abstaining.",
-            data=ReviewResult(
-                question=question, extractions=extractions, validations=validations
+            data=_finalize(
+                ReviewResult(
+                    question=question, extractions=extractions, validations=validations
+                )
             ).model_dump(),
         )
         return
@@ -263,12 +287,14 @@ def run_review(
         yield PipelineEvent(
             stage="done",
             message=summary,
-            data=ReviewResult(
-                question=question,
-                extractions=extractions,
-                validations=validations,
-                summary=summary,
-                diversity=diversity,
+            data=_finalize(
+                ReviewResult(
+                    question=question,
+                    extractions=extractions,
+                    validations=validations,
+                    summary=summary,
+                    diversity=diversity,
+                )
             ).model_dump(),
         )
         return
@@ -309,16 +335,18 @@ def run_review(
     yield PipelineEvent(
         stage="done",
         message=summary,
-        data=ReviewResult(
-            question=question,
-            extractions=extractions,
-            validations=validations,
-            pool=pool,
-            summary=summary,
-            rob=rob,
-            grade=grade,
-            sensitivity=sensitivity,
-            diversity=diversity,
+        data=_finalize(
+            ReviewResult(
+                question=question,
+                extractions=extractions,
+                validations=validations,
+                pool=pool,
+                summary=summary,
+                rob=rob,
+                grade=grade,
+                sensitivity=sensitivity,
+                diversity=diversity,
+            )
         ).model_dump(),
     )
 
@@ -387,16 +415,18 @@ def repool_with_decisions(
         grade = grade_mod.grade_outcome(result.question, pool, rob)
         loo = sensitivity_mod.leave_one_out(inputs, measure=result.question.measure)
 
-    return ReviewResult(
-        question=result.question,
-        extractions=extractions,
-        validations=validations,
-        pool=pool,
-        summary=summary,
-        rob=rob,
-        grade=grade,
-        sensitivity=loo,
-        diversity=result.diversity,
+    return _finalize(
+        ReviewResult(
+            question=result.question,
+            extractions=extractions,
+            validations=validations,
+            pool=pool,
+            summary=summary,
+            rob=rob,
+            grade=grade,
+            sensitivity=loo,
+            diversity=result.diversity,
+        )
     )
 
 
@@ -434,12 +464,14 @@ def repool_with_diversity(result: ReviewResult, decision) -> ReviewResult:
     )
 
     if pool is None:
-        return ReviewResult(
-            question=result.question,
-            extractions=extractions,
-            validations=validations,
-            summary="Too few valid trials to pool — abstaining.",
-            diversity=diversity,
+        return _finalize(
+            ReviewResult(
+                question=result.question,
+                extractions=extractions,
+                validations=validations,
+                summary="Too few valid trials to pool — abstaining.",
+                diversity=diversity,
+            )
         )
 
     summary = summarize(result.question, pool)
@@ -449,14 +481,16 @@ def repool_with_diversity(result: ReviewResult, decision) -> ReviewResult:
     grade = grade_mod.grade_outcome(result.question, pool, rob)
     loo = sensitivity_mod.leave_one_out(inputs, measure=result.question.measure)
 
-    return ReviewResult(
-        question=result.question,
-        extractions=extractions,
-        validations=validations,
-        pool=pool,
-        summary=summary,
-        rob=rob,
-        grade=grade,
-        sensitivity=loo,
-        diversity=diversity,
+    return _finalize(
+        ReviewResult(
+            question=result.question,
+            extractions=extractions,
+            validations=validations,
+            pool=pool,
+            summary=summary,
+            rob=rob,
+            grade=grade,
+            sensitivity=loo,
+            diversity=diversity,
+        )
     )
