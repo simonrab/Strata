@@ -17,6 +17,7 @@ from livemeta.core.schema import (
     BinaryArm,
     BinaryEffect,
     DiversityAssessment,
+    EligibilityDecision,
     PICO,
     Provenance,
     Question,
@@ -80,9 +81,12 @@ def _validation_failed(sid: str, code: str) -> tuple[TrialExtraction, Validation
     return ext, val
 
 
-def _result(trial_ids, extractions, validations, pool=None, diversity=None) -> ReviewResult:
+def _result(
+    trial_ids, extractions, validations, pool=None, diversity=None, screening=None
+) -> ReviewResult:
     return ReviewResult(
         question=_q(trial_ids),
+        screening=screening or [],
         extractions=extractions,
         validations=validations,
         pool=pool,
@@ -211,6 +215,65 @@ def test_abstain_when_too_few_eligible():
     assert flow.included == 1
     assert flow.included_in_synthesis == 0
     assert "abstain" in flow.synthesis_note.lower()
+
+
+# --- Eligibility screening: real clinical exclusions in the funnel -----------
+
+
+def test_screen_exclusion_is_an_eligibility_bucket_before_extraction():
+    # A trial excluded at the clinical screen has no extraction record; it must
+    # be bucketed as a real eligibility exclusion (by PICO domain), NOT counted
+    # as a not-retrieved report, and the funnel must still reconcile.
+    e_ok, v_ok = _passed("NCT1")
+    e_ok2, v_ok2 = _passed("NCT2")
+    screening = [
+        EligibilityDecision(study_id="NCT1", decision="included"),
+        EligibilityDecision(study_id="NCT2", decision="included"),
+        EligibilityDecision(
+            study_id="NCT3",
+            decision="excluded",
+            domain="population",
+            reason="Enrolled children, not the adult population.",
+        ),
+    ]
+    flow = build_prisma(
+        _result(["NCT1", "NCT2", "NCT3"], [e_ok, e_ok2], [v_ok, v_ok2], screening=screening)
+    )
+
+    assert flow.not_retrieved == 0
+    assert flow.included == 2
+    assert len(flow.excluded) == 1
+    assert flow.excluded[0].reason == "Ineligible population"
+    assert flow.excluded[0].study_ids == ["NCT3"]
+    assert flow.excluded[0].stage == "screening"  # clinical eligibility, not a data drop
+    _assert_reconciles(flow)
+
+
+def test_exclusion_stage_separates_clinical_screen_from_data_failures():
+    # A clinical-screen exclusion is tagged "screening"; a no-effect-data / failed
+    # validation exclusion is tagged "reports", so the funnel can show the two
+    # PRISMA exclusion kinds distinctly.
+    e_ok, v_ok = _passed("NCT1")
+    e_ok2, v_ok2 = _passed("NCT2")
+    e_bad, v_bad = _flagged("NCT4", "No hazard-ratio analysis found in structured results.")
+    screening = [
+        EligibilityDecision(study_id="NCT1", decision="included"),
+        EligibilityDecision(study_id="NCT2", decision="included"),
+        EligibilityDecision(study_id="NCT3", decision="excluded", domain="design"),
+        EligibilityDecision(study_id="NCT4", decision="included"),
+    ]
+    flow = build_prisma(
+        _result(
+            ["NCT1", "NCT2", "NCT3", "NCT4"],
+            [e_ok, e_ok2, e_bad],
+            [v_ok, v_ok2, v_bad],
+            screening=screening,
+        )
+    )
+    by_stage = {e.reason: e.stage for e in flow.excluded}
+    assert by_stage["Ineligible study design"] == "screening"
+    assert by_stage["No extractable effect data reported"] == "reports"
+    _assert_reconciles(flow)
 
 
 # --- Integration: the pipeline attaches a reconciled flow --------------------

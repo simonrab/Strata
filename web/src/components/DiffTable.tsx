@@ -3,7 +3,7 @@ import type { ReviewDiff, ReviewResult } from "../lib/types";
 import { excludesNull, nullEffect } from "../lib/types";
 
 function fmt(n: number | null | undefined): string {
-  return n == null ? "—" : n.toFixed(2);
+  return n == null ? "n/a" : n.toFixed(2);
 }
 
 // The "Parameter Shifts" panel: what re-pooling with the new trial changed,
@@ -29,14 +29,14 @@ export function DiffTable({
     },
     {
       label: "Heterogeneity (I²)",
-      prev: previous?.pool ? `${previous.pool.i2.toFixed(0)}%` : "—",
-      curr: current?.pool ? `${current.pool.i2.toFixed(0)}%` : "—",
+      prev: previous?.pool ? `${previous.pool.i2.toFixed(0)}%` : "n/a",
+      curr: current?.pool ? `${current.pool.i2.toFixed(0)}%` : "n/a",
       changed: (previous?.pool?.i2 ?? null) !== (current?.pool?.i2 ?? null),
     },
     {
       label: "GRADE certainty",
-      prev: previous?.grade ? previous.grade.certainty.replace("_", " ") : "—",
-      curr: current?.grade ? current.grade.certainty.replace("_", " ") : "—",
+      prev: previous?.grade ? previous.grade.certainty.replace("_", " ") : "n/a",
+      curr: current?.grade ? current.grade.certainty.replace("_", " ") : "n/a",
       changed:
         (previous?.grade?.certainty ?? null) !== (current?.grade?.certainty ?? null),
     },
@@ -56,11 +56,11 @@ export function DiffTable({
   const verdict = diff.conclusion_changed
     ? "Conclusion moved."
     : !pool
-    ? "Too few valid trials to pool — abstaining."
+    ? "Too few valid trials to pool. Abstaining."
     : significant && reduced
-    ? "Benefit holds — estimate refined."
+    ? "Benefit holds. Estimate refined."
     : significant
-    ? "Effect holds — estimate refined."
+    ? "Effect holds. Estimate refined."
     : "No statistically significant effect.";
 
   return (

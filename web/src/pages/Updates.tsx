@@ -1,28 +1,41 @@
 import { useState } from "react";
 import { useParams } from "react-router-dom";
-import { getVersion, postUpdate } from "../lib/api";
+import { checkUpdates, getVersion, postUpdate } from "../lib/api";
 import { DiffTable } from "../components/DiffTable";
 import { ForestPlot } from "../components/ForestPlot";
-import type { ReviewDiff, ReviewResult } from "../lib/types";
-
-// The living demo's held-out trial: AMPLITUDE-O (efpeglenatide, 2021), the most
-// recent GLP-1 cardiovascular outcome trial. Injecting it takes the review from
-// the 7-trial baseline to today's published 8-trial answer.
-const NEW_TRIAL = { id: "NCT03496298", label: "AMPLITUDE-O" };
+import type { ReviewDiff, ReviewResult, TrialCandidate } from "../lib/types";
 
 export function Updates() {
   const { id = "" } = useParams();
+  const [candidates, setCandidates] = useState<TrialCandidate[] | null>(null);
+  const [checking, setChecking] = useState(false);
   const [diff, setDiff] = useState<ReviewDiff | null>(null);
   const [previous, setPrevious] = useState<ReviewResult | null>(null);
   const [current, setCurrent] = useState<ReviewResult | null>(null);
-  const [injecting, setInjecting] = useState(false);
+  const [injectingId, setInjectingId] = useState<string | null>(null);
   const [error, setError] = useState(false);
 
-  async function inject() {
-    setInjecting(true);
+  // Discovery: re-run the saved question's PICO search and diff against the ids
+  // already pooled. This is the living claim made real — genuinely-new trials,
+  // not a hard-coded banner.
+  async function check() {
+    setChecking(true);
     setError(false);
     try {
-      const d = await postUpdate(id, NEW_TRIAL.id);
+      setCandidates(await checkUpdates(id));
+    } catch {
+      setError(true);
+    } finally {
+      setChecking(false);
+    }
+  }
+
+  // The reviewer's decision to update: inject one discovered trial, re-pool, diff.
+  async function inject(nctId: string) {
+    setInjectingId(nctId);
+    setError(false);
+    try {
+      const d = await postUpdate(id, nctId);
       const [prev, curr] = await Promise.all([
         getVersion(id, d.previous_version),
         getVersion(id, d.current_version),
@@ -33,26 +46,25 @@ export function Updates() {
     } catch {
       setError(true);
     } finally {
-      setInjecting(false);
+      setInjectingId(null);
     }
   }
 
   return (
     <div className="mx-auto max-w-6xl space-y-6 px-8 py-10">
       <div>
-        <p className="text-label-caps uppercase text-outline">
-          Living diff
-        </p>
+        <p className="text-label-caps uppercase text-outline">Living diff</p>
         <h1 className="mt-1 font-sans text-display-lg text-ink-light">
           Living Diff: Meta-Analysis Update
         </h1>
         <p className="mt-1 text-[14px] text-ink-muted-light">
-          Recompute the pooled answer when a new trial lands, and see what moved —
-          the estimate, the heterogeneity, and whether the conclusion changed.
+          Re-search ClinicalTrials.gov for trials that have landed since the last
+          run, then recompute the pooled answer and see what moved: the estimate,
+          the heterogeneity, and whether the conclusion changed.
         </p>
       </div>
 
-      {/* New-trial notification banner */}
+      {/* Discovery: check for genuinely-new trials on demand. */}
       <div className="flex flex-col justify-between gap-3 rounded-md border border-accent-border bg-accent-container p-4 md:flex-row md:items-center">
         <div className="flex items-center gap-3">
           <span className="relative flex h-2 w-2">
@@ -60,29 +72,60 @@ export function Updates() {
             <span className="relative inline-flex h-2 w-2 rounded-full bg-accent" />
           </span>
           <span className="font-mono text-[12px] font-semibold uppercase tracking-wider text-on-accent-container">
-            New results posted · {NEW_TRIAL.id} · {NEW_TRIAL.label} (2021)
+            Re-search this question for new readouts
           </span>
         </div>
         <button
-          onClick={inject}
-          disabled={injecting}
+          onClick={check}
+          disabled={checking}
           className="rounded-sm bg-accent px-4 py-2 text-[13px] font-medium text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {injecting ? "Re-pooling…" : `Inject ${NEW_TRIAL.label}`}
+          {checking ? "Checking…" : "Check for new trials"}
         </button>
       </div>
 
       {error && (
         <p className="font-mono text-[13px] text-risk-high">
-          Update failed. Seed the demo baseline first, then try again.
+          Check failed. Seed the demo baseline first, then try again.
         </p>
       )}
 
-      {!diff && !injecting && (
+      {candidates !== null && candidates.length === 0 && (
         <p className="rounded-md hairline bg-surface-container-low px-4 py-3 text-[13px] text-ink-muted-light">
-          Inject the new trial to re-run the pooled analysis and compare it against
-          the current version.
+          No new trials since last run. The pooled answer is current.
         </p>
+      )}
+
+      {candidates && candidates.length > 0 && (
+        <div className="rounded-md hairline bg-card-light p-4">
+          <p className="mb-3 text-[13px] font-medium text-ink-light">
+            {candidates.length} new{" "}
+            {candidates.length === 1 ? "trial" : "trials"} found — inject one to
+            re-pool and diff.
+          </p>
+          <ul className="space-y-2">
+            {candidates.map((c) => (
+              <li
+                key={c.nct_id}
+                className="flex flex-col justify-between gap-2 rounded-sm hairline bg-surface-container-low px-3 py-2 md:flex-row md:items-center"
+              >
+                <div className="flex flex-col">
+                  <span className="font-mono text-[12px] text-accent">
+                    {c.nct_id}
+                  </span>
+                  <span className="text-[13px] text-ink-light">{c.title}</span>
+                </div>
+                <button
+                  onClick={() => inject(c.nct_id)}
+                  disabled={injectingId !== null}
+                  className="shrink-0 rounded-sm bg-accent px-3 py-1.5 text-[12px] font-medium text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {injectingId === c.nct_id ? "Re-pooling…" : "Inject"}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
 
       {diff && current && (
@@ -98,7 +141,7 @@ export function Updates() {
               <ForestPlot pool={current.pool} highlightStudyIds={diff.added_trials} />
             ) : (
               <p className="font-mono text-[12px] text-ink-muted-light">
-                Too few valid trials to pool — abstaining.
+                Too few valid trials to pool. Abstaining.
               </p>
             )}
           </section>

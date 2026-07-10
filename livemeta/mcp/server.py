@@ -332,6 +332,19 @@ def update(question_id: str, new_trial_id: str) -> ReviewDiff:
 
 
 @mcp.tool()
+def check_updates(question_id: str) -> list[TrialCandidate]:
+    """Re-search a saved review's PICO and return trials new since the last run.
+
+    The discovery half of the living layer: it re-runs the same PICO search that
+    built the review and diffs the hits against the ids already pooled, so what
+    comes back is exactly the set a reviewer could feed to `update`. It never
+    auto-pools. Shares its core with the REST `check-updates` endpoint via
+    `living.check_for_new_trials`.
+    """
+    return living_mod.check_for_new_trials(get_store(), question_id, get_client())
+
+
+@mcp.tool()
 def map_landscape(condition: str, as_of: str | None = None) -> Landscape:
     """Map the competitive pipeline for a condition, as of an optional date.
 

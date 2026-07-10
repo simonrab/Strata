@@ -12,6 +12,13 @@ Feature: Living meta-analysis pipeline
     And the confidence interval shows a significant cardiovascular benefit
     And the plain-language summary reports the benefit
 
+  Scenario: Screen out an ineligible trial before pooling
+    Given three eligible trials and one enrolling the wrong population
+    When the review pipeline runs
+    Then the ineligible trial is excluded at the eligibility screen with a reason
+    And only the eligible trials reach the pool
+    And the PRISMA funnel records the eligibility exclusion
+
   Scenario: Pool a continuous outcome on the natural scale
     Given a continuous-outcome question with two trials reporting mean, SD and n
     When the review pipeline runs

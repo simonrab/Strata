@@ -11,7 +11,7 @@ function statusFor(meta: SnapshotMeta, latest: number): string {
 }
 
 function estimate(m: SnapshotMeta): string {
-  if (m.estimate == null || m.ci_low == null || m.ci_high == null) return "—";
+  if (m.estimate == null || m.ci_low == null || m.ci_high == null) return "n/a";
   return `${m.measure} ${m.estimate.toFixed(2)} [${m.ci_low.toFixed(2)}, ${m.ci_high.toFixed(2)}]`;
 }
 
@@ -119,7 +119,7 @@ export function AuditTrail() {
               Snapshot key
             </p>
             <p className="mt-1 font-mono text-[12px] text-ink-light">
-              {id} · v{latest || "—"}
+              {id} · v{latest || "n/a"}
             </p>
           </div>
         </div>

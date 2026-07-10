@@ -31,6 +31,7 @@ from .stats import sensitivity as sensitivity_mod
 from . import extract as extract_mod
 from . import prisma as prisma_mod
 from . import rob as rob_mod
+from . import screen as screen_mod
 from . import validate as validate_mod
 
 FetchStudy = Callable[[str], dict]
@@ -190,6 +191,7 @@ def run_review(
     question: Question,
     fetch_study: FetchStudy | None = None,
     llm_client=None,
+    screening_overrides: dict | None = None,
 ) -> Iterator[PipelineEvent]:
     fetch_study = fetch_study or SourceRouter().fetch
 
@@ -206,10 +208,11 @@ def run_review(
 
     # Fetch (I/O-bound) over a bounded thread pool rather than one-at-a-time, and
     # tolerate a per-trial retrieval failure instead of aborting the whole run.
-    # Extractions are reassembled in the original order afterwards, so the pool,
-    # forest plot, and tests stay deterministic regardless of completion timing.
+    # De-duplicate first (the PRISMA screen step), so a repeated id is fetched,
+    # screened, and pooled once.
+    unique_ids = prisma_mod.dedupe_preserving_order(question.trial_ids)
     studies_by_id: dict[str, dict] = {}
-    extractions_by_id: dict[str, TrialExtraction] = {}
+    fetch_errors: dict[str, Exception] = {}
 
     def _fetch(nct: str):
         try:
@@ -217,27 +220,55 @@ def run_review(
         except Exception as exc:  # reported per-trial below; never aborts the run
             return nct, None, exc
 
-    workers = min(_FETCH_CONCURRENCY, max(1, len(question.trial_ids)))
+    workers = min(_FETCH_CONCURRENCY, max(1, len(unique_ids)))
     with ThreadPoolExecutor(max_workers=workers) as pool_ex:
-        futures = [pool_ex.submit(_fetch, nct) for nct in question.trial_ids]
+        futures = [pool_ex.submit(_fetch, nct) for nct in unique_ids]
         for future in as_completed(futures):
             nct, study, err = future.result()
             if study is None:
-                ext = _failed_extraction(nct, err)
+                fetch_errors[nct] = err
             else:
                 studies_by_id[nct] = study
-                ext = extract_mod.extract_any(study, question.measure, llm_client=llm_client)
-            extractions_by_id[nct] = ext
-            msg = (
-                f"{ext.label}: flagged for review ({ext.flag_reason})"
-                if ext.flagged
-                else f"{ext.label}: {_effect_summary(ext)}"
-            )
-            yield PipelineEvent(stage="extract", message=msg, data=ext.model_dump())
 
-    extractions = [
-        extractions_by_id[nct] for nct in question.trial_ids if nct in extractions_by_id
-    ]
+    # Screen for clinical eligibility *before* extraction: only trials judged
+    # eligible for the question's PICO are extracted and pooled; the rest are
+    # recorded (with a reason and, when Claude judged it, a source quote) so the
+    # PRISMA funnel shows a real screening stage. A retrieval failure can't be
+    # screened — it has no record — and falls through as a not-retrieved report.
+    screening = screen_mod.screen_candidates(
+        question, studies_by_id, llm_client=llm_client, overrides=screening_overrides
+    )
+    included_ids = {d.study_id for d in screening if d.decision == "included"}
+    n_excluded = len(screening) - len(included_ids)
+    yield PipelineEvent(
+        stage="screen",
+        message=(
+            f"{len(included_ids)} of {len(screening)} trials eligible"
+            + (f"; {n_excluded} excluded at screening." if n_excluded else ".")
+        ),
+        data={"screening": [d.model_dump() for d in screening]},
+    )
+
+    # Extract only the screened-in trials (and surface retrieval failures), in the
+    # original candidate order so the pool, forest plot, and tests stay
+    # deterministic regardless of fetch completion timing.
+    extractions: list[TrialExtraction] = []
+    for nct in unique_ids:
+        if nct in fetch_errors:
+            ext = _failed_extraction(nct, fetch_errors[nct])
+        elif nct in included_ids:
+            ext = extract_mod.extract_any(
+                studies_by_id[nct], question.measure, llm_client=llm_client
+            )
+        else:
+            continue  # screened out — recorded in `screening`, never pooled
+        extractions.append(ext)
+        msg = (
+            f"{ext.label}: flagged for review ({ext.flag_reason})"
+            if ext.flagged
+            else f"{ext.label}: {_effect_summary(ext)}"
+        )
+        yield PipelineEvent(stage="extract", message=msg, data=ext.model_dump())
 
     validations = validate_mod.validate_extractions(extractions)
     passed_ids = {v.study_id for v in validations if v.passed}
@@ -259,7 +290,10 @@ def run_review(
             message="Too few valid trials to pool — abstaining.",
             data=_finalize(
                 ReviewResult(
-                    question=question, extractions=extractions, validations=validations
+                    question=question,
+                    screening=screening,
+                    extractions=extractions,
+                    validations=validations,
                 )
             ).model_dump(),
         )
@@ -290,6 +324,7 @@ def run_review(
             data=_finalize(
                 ReviewResult(
                     question=question,
+                    screening=screening,
                     extractions=extractions,
                     validations=validations,
                     summary=summary,
@@ -338,6 +373,7 @@ def run_review(
         data=_finalize(
             ReviewResult(
                 question=question,
+                screening=screening,
                 extractions=extractions,
                 validations=validations,
                 pool=pool,
@@ -352,11 +388,16 @@ def run_review(
 
 
 def run_review_collect(
-    question: Question, fetch_study: FetchStudy | None = None, llm_client=None
+    question: Question,
+    fetch_study: FetchStudy | None = None,
+    llm_client=None,
+    screening_overrides: dict | None = None,
 ) -> ReviewResult:
     """Drain the pipeline and return the final ReviewResult."""
     result = ReviewResult(question=question)
-    for event in run_review(question, fetch_study, llm_client=llm_client):
+    for event in run_review(
+        question, fetch_study, llm_client=llm_client, screening_overrides=screening_overrides
+    ):
         if event.stage == "done" and event.data is not None:
             result = ReviewResult.model_validate(event.data)
     return result
@@ -418,6 +459,7 @@ def repool_with_decisions(
     return _finalize(
         ReviewResult(
             question=result.question,
+            screening=result.screening,
             extractions=extractions,
             validations=validations,
             pool=pool,
@@ -467,6 +509,7 @@ def repool_with_diversity(result: ReviewResult, decision) -> ReviewResult:
         return _finalize(
             ReviewResult(
                 question=result.question,
+                screening=result.screening,
                 extractions=extractions,
                 validations=validations,
                 summary="Too few valid trials to pool — abstaining.",
@@ -484,6 +527,7 @@ def repool_with_diversity(result: ReviewResult, decision) -> ReviewResult:
     return _finalize(
         ReviewResult(
             question=result.question,
+            screening=result.screening,
             extractions=extractions,
             validations=validations,
             pool=pool,

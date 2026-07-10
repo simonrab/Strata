@@ -39,6 +39,7 @@ from ..core.sources.openfda import OpenFdaClient
 from ..core.diff import diff_reviews, status_from_diff
 from ..core.schema import (
     DiversityDecision,
+    EligibilityDecision,
     Question,
     ReviewDecision,
     ReviewDiff,
@@ -46,6 +47,7 @@ from ..core.schema import (
     ReviewSummary,
     RobDecision,
     SnapshotMeta,
+    TrialCandidate,
 )
 from ..core.sources.clinicaltrials import ClinicalTrialsClient
 from ..core.sources.router import SourceRouter
@@ -83,6 +85,11 @@ def get_parse():
         return llm.parse_question(text, search_client=ClinicalTrialsClient())
 
     return parse
+
+
+def get_search_client():
+    """Injectable CT.gov search client for the living re-search (overridden in tests)."""
+    return ClinicalTrialsClient()
 
 
 def get_ci_search():
@@ -129,6 +136,12 @@ class UpdateRequest(BaseModel):
 
 
 class DiversityDecisionRequest(BaseModel):
+    reason: str | None = None
+
+
+class ScreeningDecisionRequest(BaseModel):
+    study_id: str
+    decision: str  # "included" | "excluded"
     reason: str | None = None
 
 
@@ -248,6 +261,22 @@ def update_review(
         raise HTTPException(status_code=404, detail="No such review.")
 
 
+@app.post("/api/reviews/{question_id}/check-updates", response_model=list[TrialCandidate])
+def check_updates(
+    question_id: str,
+    search_client=Depends(get_search_client),
+    store: SnapshotStore = Depends(get_store),
+) -> list[TrialCandidate]:
+    """Make the living claim real: re-search the saved question's PICO and return
+    the trials that are genuinely new since the last run. Discovery only — the
+    reviewer decides whether to inject one via the update endpoint. Shares its
+    core with the MCP `check_updates` tool."""
+    try:
+        return living.check_for_new_trials(store, question_id, search_client)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="No such review.")
+
+
 @app.get("/api/reviews/{question_id}/history", response_model=list[SnapshotMeta])
 def review_history(
     question_id: str, store: SnapshotStore = Depends(get_store)
@@ -329,6 +358,49 @@ def record_rob_decision(
     latest.rob = [rob_mod.apply_rob_decisions(a, decisions) for a in latest.rob]
     store.save_snapshot(latest)
     return latest
+
+
+@app.post("/api/reviews/{question_id}/screening/decision", response_model=ReviewResult)
+def record_screening_decision(
+    question_id: str,
+    req: ScreeningDecisionRequest,
+    fetch=Depends(get_fetch_study),
+    store: SnapshotStore = Depends(get_store),
+) -> ReviewResult:
+    """Record a reviewer's include/exclude sign-off on one trial's eligibility.
+
+    Confirming keeps Claude's call (with `decision` equal to it); overriding flips
+    it. Because a screened-out trial is never extracted, the decision is applied by
+    *re-running* the review with every stored eligibility override replayed — so
+    flipping a trial back in re-fetches and re-pools it. Human extraction and RoB
+    sign-offs are re-applied afterward so the audit trail is preserved.
+    """
+    latest = store.load_latest(question_id)
+    if latest is None:
+        raise HTTPException(status_code=404, detail="No such review.")
+
+    store.save_screening_decision(
+        question_id,
+        EligibilityDecision(
+            study_id=req.study_id,
+            decision=req.decision,
+            reason=req.reason or "Reviewer sign-off.",
+            by_claude=False,
+            confirmed=True,
+        ),
+    )
+    overrides = {d.study_id: d for d in store.load_screening_decisions(question_id)}
+    rerun = pipeline.run_review_collect(
+        latest.question, fetch, screening_overrides=overrides
+    )
+    review_decisions = store.load_decisions(question_id)
+    if review_decisions:
+        rerun = pipeline.repool_with_decisions(rerun, review_decisions)
+    rob_decisions = store.load_rob_decisions(question_id)
+    if rob_decisions:
+        rerun.rob = [rob_mod.apply_rob_decisions(a, rob_decisions) for a in rerun.rob]
+    store.save_snapshot(rerun)
+    return rerun
 
 
 # --- Competitive-intelligence landscape -------------------------------------

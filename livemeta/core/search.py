@@ -25,12 +25,22 @@ def build_query(pico: PICO) -> str:
 
 
 def search_trials(
-    pico: PICO, max_results: int = 1000, client: ClinicalTrialsClient | None = None
+    pico: PICO,
+    max_results: int = 1000,
+    client: ClinicalTrialsClient | None = None,
+    interventional_only: bool = True,
 ) -> list[TrialCandidate]:
-    """Search CT.gov for candidate trials matching the PICO."""
+    """Search CT.gov for candidate trials matching the PICO.
+
+    `interventional_only` (on by default) applies CT.gov's study-type filter at
+    the API — the first, cheapest screen — so the candidate set the pipeline
+    screens clinically is already limited to interventional trials.
+    """
     client = client or ClinicalTrialsClient()
     query = build_query(pico)
-    hits = client.search_studies(query, page_size=max_results)
+    hits = client.search_studies(
+        query, page_size=max_results, interventional_only=interventional_only
+    )
     return [
         TrialCandidate(nct_id=h.get("nct_id", ""), title=h.get("title", ""))
         for h in hits

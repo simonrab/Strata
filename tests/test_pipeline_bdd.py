@@ -17,6 +17,11 @@ def test_pipeline_end_to_end():
     pass
 
 
+@scenario("pipeline.feature", "Screen out an ineligible trial before pooling")
+def test_pipeline_screening():
+    pass
+
+
 @scenario("pipeline.feature", "Pool a continuous outcome on the natural scale")
 def test_pipeline_continuous():
     pass
@@ -103,6 +108,9 @@ def _continuous_run(monkeypatch):
 @when("the review pipeline runs", target_fixture="review")
 def _run_generic(request):
     # Reuse the locked-question fixtures when present; otherwise a scenario-local run.
+    if "screening_run" in request.fixturenames:
+        q, fetch, llm = request.getfixturevalue("screening_run")
+        return run_review_collect(q, fetch, llm_client=llm)
     if "question" in request.fixturenames and "fetch_study" in request.fixturenames:
         return run_review_collect(
             request.getfixturevalue("question"),
@@ -116,6 +124,50 @@ def _run_generic(request):
         return run_review_collect(q, fetch)
     q, fetch, llm = request.getfixturevalue("europepmc_run")
     return run_review_collect(q, fetch, llm_client=llm)
+
+
+# --- Eligibility screening scenario -----------------------------------------
+
+
+@given(
+    "three eligible trials and one enrolling the wrong population",
+    target_fixture="screening_run",
+)
+def _screening_run(monkeypatch):
+    monkeypatch.setenv("LIVEMETA_STATS_ENGINE", "python")
+    from tests.test_pipeline import _PerTrialScreenLLM, _hr_study
+
+    studies = {
+        "NCT80000001": _hr_study("NCT80000001", 0.80, 0.70, 0.92, "Adults with T2D."),
+        "NCT80000002": _hr_study("NCT80000002", 0.85, 0.74, 0.98, "Adults with T2D."),
+        "NCT80000003": _hr_study("NCT80000003", 0.88, 0.77, 1.01, "Adults with T2D."),
+        "NCT89999999": _hr_study("NCT89999999", 0.50, 0.40, 0.62, "PEDIATRIC: ages 6-17."),
+    }
+    question = demo.GLP1_MACE_QUESTION.model_copy(update={"trial_ids": list(studies)})
+    return question, lambda nct: studies[nct], _PerTrialScreenLLM()
+
+
+@then("the ineligible trial is excluded at the eligibility screen with a reason")
+def _screen_excluded(review):
+    excluded = [d for d in review.screening if d.decision == "excluded"]
+    assert len(excluded) == 1
+    assert excluded[0].study_id == "NCT89999999"
+    assert excluded[0].reason
+    assert excluded[0].domain == "population"
+
+
+@then("only the eligible trials reach the pool")
+def _only_eligible_pooled(review):
+    assert review.pool is not None
+    assert review.pool.k == 3
+    assert "NCT89999999" not in {s.study_id for s in review.pool.studies}
+
+
+@then("the PRISMA funnel records the eligibility exclusion")
+def _prisma_records_exclusion(review):
+    assert review.prisma is not None
+    excluded_ids = {sid for e in review.prisma.excluded for sid in e.study_ids}
+    assert "NCT89999999" in excluded_ids
 
 
 @given(

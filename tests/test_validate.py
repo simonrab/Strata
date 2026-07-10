@@ -113,6 +113,36 @@ def test_validate_extractions_routes_ratio():
     assert res.passed
 
 
+def test_implausible_ratio_magnitude_is_flagged():
+    # A hazard ratio of 50 is far outside any plausible clinical effect — a likely
+    # data-entry error the thin old gate (positive + ordered CI) would have passed.
+    [res] = validate_extractions([_ratio_ext("big", 50.0, 30.0, 80.0)])
+    assert not res.passed
+    assert any(i.code == "implausible_ratio" for i in res.issues)
+
+
+def test_implausibly_wide_ci_is_flagged():
+    [res] = validate_extractions([_ratio_ext("wide", 1.0, 0.001, 900.0)])
+    assert not res.passed
+    assert any(i.code == "implausible_ci_width" for i in res.issues)
+
+
+def test_comparison_arm_order_does_not_fail_validation():
+    # CT.gov listing placebo as the first compared arm is not, on its own, a
+    # flipped ratio — group order is unreliable, so it must never fail the gate.
+    placebo_first = TrialExtraction(
+        study_id="ok",
+        label="ok",
+        measure=EffectMeasure.HR,
+        hr=0.80,
+        ci_low=0.70,
+        ci_high=0.92,
+        comparison_arms=["Placebo", "Semaglutide"],
+    )
+    [res] = validate_extractions([placebo_first])
+    assert res.passed
+
+
 def test_validate_extractions_routes_binary():
     good = validate_extractions([_binary_ext("ok", 40, 500, 60, 500)])[0]
     assert good.passed

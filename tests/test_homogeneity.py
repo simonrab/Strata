@@ -126,3 +126,36 @@ def test_keyless_does_not_fabricate_or_force_gate():
     assert div.requires_confirmation is False
     assert div.domains  # four PICO domains present
     assert all(d.judgment == "not_assessed" for d in div.domains)
+
+
+def test_keyless_run_is_honest_about_reduced_coverage():
+    # The gate must not advertise a full clinical screen it did not run: keyless,
+    # `clinical_assessed` is False and the rationale says the gate rests on I² alone.
+    div = assess_diversity(_question(), [], [], _pool(30.0), llm_client=None)
+    assert div.clinical_assessed is False
+    assert "not assessed" in div.rationale.lower() or "reduced" in div.rationale.lower()
+
+
+def test_keyed_run_marks_clinical_assessed_true():
+    from livemeta.core.homogeneity import _DiversityJudged
+
+    judged = _DiversityJudged(
+        population="similar", intervention="similar", comparator="similar", outcome="similar"
+    )
+    div = assess_diversity(_question(), [], [], _pool(20.0), llm_client=_StubLLM(judged))
+    assert div.clinical_assessed is True
+
+
+def test_digest_includes_extracted_endpoints_for_the_outcome_judgment():
+    # The outcome-consistency judgment must see the actual pooled endpoints, so a
+    # MACE HR pooled against an all-cause-mortality HR is visible to the gate.
+    from livemeta.core.homogeneity import _trial_digest
+    from livemeta.core.schema import TrialExtraction
+
+    exts = [
+        TrialExtraction(study_id="NCT1", label="A", endpoint="3-point MACE"),
+        TrialExtraction(study_id="NCT2", label="B", endpoint="All-cause mortality"),
+    ]
+    digest = _trial_digest(_question(), [], exts)
+    assert "3-point MACE" in digest
+    assert "All-cause mortality" in digest

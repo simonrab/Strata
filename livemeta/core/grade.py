@@ -14,7 +14,12 @@ import os
 
 from pydantic import BaseModel
 
-from .pipeline import interpret_i2, pool_direction, pool_significant
+from .pipeline import (
+    heterogeneity_clause,
+    interpret_i2,
+    pool_direction,
+    pool_significant,
+)
 from .schema import (
     EggerResult,
     GradeAssessment,
@@ -91,7 +96,7 @@ def _inconsistency_domain(pool: PoolResult) -> GradeDomain:
         serious="serious" if serious else "not_serious",
         downgrade=-1 if serious else 0,
         rationale=(
-            f"Heterogeneity was {band} (I² = {pool.i2:.0f}%)."
+            f"{heterogeneity_clause(pool.i2).capitalize()} (I² = {pool.i2:.0f}%)."
             + (" Point estimates diverge across trials." if serious else " Estimates are consistent.")
         ),
     )

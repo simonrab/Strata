@@ -213,6 +213,112 @@ def test_pipeline_aggregates_assumptions_from_studies():
     assert sum(1 for a in review.pool.assumptions if a.code == "log_ratio_se_from_ci") == 8
 
 
+# --- Eligibility screening: screened-out trials never reach the pool --------
+
+
+def _hr_study(nct: str, hr: float, lo: float, hi: float, eligibility: str = "") -> dict:
+    return {
+        "protocolSection": {
+            "identificationModule": {"nctId": nct, "briefTitle": nct},
+            "eligibilityModule": {"eligibilityCriteria": eligibility},
+        },
+        "resultsSection": {
+            "outcomeMeasuresModule": {
+                "outcomeMeasures": [
+                    {
+                        "type": "PRIMARY",
+                        "title": "Primary",
+                        "analyses": [
+                            {
+                                "paramType": "Hazard Ratio",
+                                "paramValue": str(hr),
+                                "ciLowerLimit": str(lo),
+                                "ciUpperLimit": str(hi),
+                            }
+                        ],
+                    }
+                ]
+            }
+        },
+    }
+
+
+class _StubParsed:
+    def __init__(self, parsed):
+        self.parsed_output = parsed
+
+
+class _PerTrialScreenLLM:
+    """Judges a trial ineligible when its eligibility text carries PEDIATRIC.
+
+    Only the screen call is stubbed with intent; every other model call in the
+    run (RoB, GRADE) gets that request's default model, mirroring a real client
+    returning the requested output shape.
+    """
+
+    class _Messages:
+        def parse(self, **kwargs):
+            from livemeta.core.screen import _ScreenJudged
+
+            fmt = kwargs.get("output_format")
+            if fmt is _ScreenJudged:
+                content = kwargs["messages"][0]["content"]
+                if "PEDIATRIC" in content:
+                    return _StubParsed(
+                        _ScreenJudged(
+                            eligible=False,
+                            domain="population",
+                            reason="Enrolled children, not the adult population.",
+                            quote="Ages 6-17 years.",
+                        )
+                    )
+                return _StubParsed(_ScreenJudged(eligible=True, reason="Matches the PICO."))
+            return _StubParsed(fmt())  # RoB / GRADE: default judgment
+
+    @property
+    def messages(self):
+        return _PerTrialScreenLLM._Messages()
+
+
+def test_screened_out_trial_never_reaches_the_pool(monkeypatch):
+    monkeypatch.setenv("LIVEMETA_STATS_ENGINE", "python")
+    good = {
+        "NCT70000001": _hr_study("NCT70000001", 0.80, 0.70, 0.92, "Adults with T2D."),
+        "NCT70000002": _hr_study("NCT70000002", 0.85, 0.74, 0.98, "Adults with T2D."),
+        "NCT70000003": _hr_study("NCT70000003", 0.88, 0.77, 1.01, "Adults with T2D."),
+    }
+    # Ineligible trial: a valid HR that WOULD pool if the screen didn't drop it.
+    ineligible = {
+        "NCT79999999": _hr_study("NCT79999999", 0.50, 0.40, 0.62, "PEDIATRIC: ages 6-17.")
+    }
+    studies = {**good, **ineligible}
+
+    question = demo.GLP1_MACE_QUESTION.model_copy(update={"trial_ids": list(studies)})
+    result = run_review_collect(
+        question, lambda nct: studies[nct], llm_client=_PerTrialScreenLLM()
+    )
+
+    # The eligible three pool; the pediatric trial is screened out despite a valid HR.
+    assert result.pool is not None
+    assert result.pool.k == 3
+    pooled_ids = {s.study_id for s in result.pool.studies}
+    assert "NCT79999999" not in pooled_ids
+
+    # It is recorded as a clinical eligibility exclusion, with provenance…
+    excluded = next(d for d in result.screening if d.decision == "excluded")
+    assert excluded.study_id == "NCT79999999"
+    assert excluded.domain == "population"
+    assert excluded.by_claude is True
+    assert excluded.quote is not None
+    # …and it never received an extraction record.
+    assert all(e.study_id != "NCT79999999" for e in result.extractions)
+
+    # The PRISMA funnel shows the real eligibility stage.
+    flow = result.prisma
+    assert flow is not None
+    assert "NCT79999999" in {sid for e in flow.excluded for sid in e.study_ids}
+
+
 # --- Homogeneity gate -------------------------------------------------------
 
 

@@ -75,7 +75,7 @@ export function GradeDetail() {
     return (
       <div className="mx-auto max-w-6xl px-8 py-10">
         <p className="font-mono text-[13px] text-ink-muted-light">
-          No GRADE rating — the review has not been pooled.
+          No GRADE rating. The review has not been pooled.
         </p>
       </div>
     );
@@ -137,7 +137,7 @@ export function GradeDetail() {
       <div>
         <h2 className="mb-4 flex items-center gap-2 text-[13px] font-medium text-ink-light">
           <Icon name="analytics" size={18} className="text-accent" />
-          Certainty detail — five GRADE domains
+          Certainty detail · five GRADE domains
         </h2>
         <div className="grid grid-cols-1 gap-3 md:grid-cols-3 lg:grid-cols-5">
           {grade.domains.map((d) => {
@@ -184,7 +184,7 @@ export function GradeDetail() {
         <div>
           <h2 className="mb-4 flex items-center gap-2 text-[13px] font-medium text-ink-light">
             <Icon name="scatter_plot" size={18} className="text-accent" />
-            Funnel plot — small-study effects
+            Funnel plot · small-study effects
           </h2>
           <div className="max-w-xl rounded-md hairline bg-card-light p-5">
             <FunnelPlot pool={pool} egger={grade.publication_bias_test} />

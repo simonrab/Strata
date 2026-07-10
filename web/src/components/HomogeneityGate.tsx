@@ -50,7 +50,7 @@ export function HomogeneityGate({
         <Icon name="warning" size={22} fill className="mt-0.5 shrink-0 text-risk-some" />
         <div className="min-w-0 flex-1">
           <h2 className="text-[15px] font-semibold text-ink-light">
-            Pooling withheld — confirm the trials are combinable
+            Pooling withheld · confirm the trials are combinable
           </h2>
           <p className="mt-1 font-serif text-[14px] leading-6 text-ink-muted-light">
             {diversity.rationale}
@@ -76,7 +76,7 @@ export function HomogeneityGate({
           <div className="mt-4 flex flex-wrap items-center gap-4">
             <span className="font-mono text-[12px] text-ink-muted-light">
               Statistical heterogeneity: I²{" "}
-              {diversity.i2 != null ? `${diversity.i2.toFixed(0)}%` : "—"} ({diversity.i2_band})
+              {diversity.i2 != null ? `${diversity.i2.toFixed(0)}%` : "n/a"} ({diversity.i2_band})
             </span>
             <button
               onClick={confirm}

@@ -68,7 +68,7 @@ export function ExtractionConfirmation() {
         Confirm extraction
       </h1>
       <p className="mt-1 font-serif text-[16px] text-ink-muted-light">
-        {ext.label} — verify the effect estimate against the source before confirming.
+        {ext.label} · verify the effect estimate against the source before confirming.
       </p>
 
       <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-3">

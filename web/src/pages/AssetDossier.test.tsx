@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import { AssetDossier } from "./AssetDossier";
 import type { AssetDossier as Dossier } from "../lib/types";
@@ -68,5 +69,30 @@ describe("AssetDossier", () => {
     vi.mocked(getAssetDossier).mockResolvedValue(dossier);
     renderPage();
     expect(await screen.findByText("Sources")).toBeInTheDocument();
+  });
+
+  it("expands a sub-indication to reveal its trials, joined from the dossier", async () => {
+    vi.mocked(getAssetDossier).mockResolvedValue(dossier);
+    const user = userEvent.setup();
+    renderPage();
+
+    await screen.findByText("Obesity + established CVD");
+    // The trial list is collapsed until the sub-indication is clicked.
+    expect(screen.queryByTestId("subind-trials-obesity|cvd")).not.toBeInTheDocument();
+
+    await user.click(
+      screen.getByRole("button", { name: /Obesity \+ established CVD/i })
+    );
+
+    const panel = await screen.findByTestId("subind-trials-obesity|cvd");
+    // The trial is looked up from the dossier's full trial detail by its NCT id.
+    expect(within(panel).getByText("STEP 1")).toBeInTheDocument();
+    expect(within(panel).getByText("NCT1")).toBeInTheDocument();
+
+    // Clicking again collapses it.
+    await user.click(
+      screen.getByRole("button", { name: /Obesity \+ established CVD/i })
+    );
+    expect(screen.queryByTestId("subind-trials-obesity|cvd")).not.toBeInTheDocument();
   });
 });

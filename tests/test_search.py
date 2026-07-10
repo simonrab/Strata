@@ -75,3 +75,31 @@ def test_search_trials_default_cap_is_1000():
 
     assert route.called
     assert route.calls.last.request.url.params["pageSize"] == "1000"
+
+
+@respx.mock
+def test_search_trials_filters_to_interventional_by_default():
+    # First deterministic screen: narrow the candidate set to interventional
+    # trials at the API so observational records never enter the pipeline.
+    route = respx.get(STUDIES_URL).mock(
+        return_value=httpx.Response(200, json={"studies": []})
+    )
+
+    search.search_trials(_pico())
+
+    assert route.called
+    adv = route.calls.last.request.url.params["filter.advanced"]
+    assert "StudyType" in adv and "INTERVENTIONAL" in adv
+
+
+@respx.mock
+def test_search_studies_omits_filter_when_not_interventional_only():
+    route = respx.get(STUDIES_URL).mock(
+        return_value=httpx.Response(200, json={"studies": []})
+    )
+
+    from livemeta.core.sources.clinicaltrials import ClinicalTrialsClient
+
+    ClinicalTrialsClient().search_studies("GLP-1 MACE")  # default: no design filter
+
+    assert "filter.advanced" not in route.calls.last.request.url.params

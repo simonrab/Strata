@@ -7,10 +7,11 @@ import { diffFixture, reviewFixture } from "../test/fixtures";
 import type { ReviewResult } from "../lib/types";
 
 vi.mock("../lib/api", () => ({
+  checkUpdates: vi.fn(),
   postUpdate: vi.fn(),
   getVersion: vi.fn(),
 }));
-import { postUpdate, getVersion } from "../lib/api";
+import { checkUpdates, postUpdate, getVersion } from "../lib/api";
 
 // The current (v2) snapshot must contain the injected trial so the forest plot
 // has a row to highlight.
@@ -47,20 +48,46 @@ function renderAt() {
 describe("Updates", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("shows the new-trial banner with an inject action", () => {
+  it("checks for new trials and lists the real candidates the re-search found", async () => {
+    vi.mocked(checkUpdates).mockResolvedValue([
+      { nct_id: "NCT03496298", title: "AMPLITUDE-O" },
+    ]);
+
     renderAt();
-    expect(screen.getByText(/New results posted/i)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /inject/i })).toBeInTheDocument();
+    await userEvent.click(
+      screen.getByRole("button", { name: /check for new trials/i })
+    );
+
+    expect(await screen.findByText("NCT03496298")).toBeInTheDocument();
+    expect(screen.getByText("AMPLITUDE-O")).toBeInTheDocument();
+    expect(checkUpdates).toHaveBeenCalledWith("glp1-mace");
   });
 
-  it("injects the held-out trial, then shows the diff and highlighted new row", async () => {
+  it("shows an honest empty state when nothing is new", async () => {
+    vi.mocked(checkUpdates).mockResolvedValue([]);
+
+    renderAt();
+    await userEvent.click(
+      screen.getByRole("button", { name: /check for new trials/i })
+    );
+
+    expect(await screen.findByText(/no new trials/i)).toBeInTheDocument();
+  });
+
+  it("injects a discovered trial, then shows the diff and highlighted new row", async () => {
+    vi.mocked(checkUpdates).mockResolvedValue([
+      { nct_id: "NCT03496298", title: "AMPLITUDE-O" },
+    ]);
     vi.mocked(postUpdate).mockResolvedValue(diffFixture);
     vi.mocked(getVersion).mockImplementation((_id: string, v: number) =>
       Promise.resolve(v === diffFixture.previous_version ? reviewFixture : current)
     );
 
     renderAt();
-    await userEvent.click(screen.getByRole("button", { name: /inject/i }));
+    await userEvent.click(
+      screen.getByRole("button", { name: /check for new trials/i })
+    );
+    await userEvent.click(await screen.findByRole("button", { name: /inject/i }));
 
     expect(await screen.findByText("Parameter Shifts")).toBeInTheDocument();
     expect(screen.getByText(/Benefit holds/i)).toBeInTheDocument();

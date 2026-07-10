@@ -11,8 +11,9 @@ const flow: PrismaFlow = {
   not_retrieved: 1,
   assessed: 8,
   excluded: [
-    { reason: "No extractable effect data reported", count: 2, study_ids: ["NCT7", "NCT8"] },
-    { reason: "Confidence interval does not bracket the estimate", count: 1, study_ids: ["NCT9"] },
+    { reason: "Ineligible population", count: 1, study_ids: ["NCT6"], stage: "screening" },
+    { reason: "No extractable effect data reported", count: 2, study_ids: ["NCT7", "NCT8"], stage: "reports" },
+    { reason: "Confidence interval does not bracket the estimate", count: 1, study_ids: ["NCT9"], stage: "reports" },
   ],
   included: 5,
   included_in_synthesis: 5,
@@ -34,9 +35,17 @@ describe("PrismaFlowView", () => {
     const { getByText } = render(<PrismaFlowView flow={flow} />);
     expect(getByText("Duplicates removed")).toBeInTheDocument();
     expect(getByText("Reports not retrieved")).toBeInTheDocument();
-    expect(getByText("Records excluded")).toBeInTheDocument();
     expect(getByText("No extractable effect data reported")).toBeInTheDocument();
     expect(getByText("Confidence interval does not bracket the estimate")).toBeInTheDocument();
+  });
+
+  it("separates clinical-eligibility exclusions from data exclusions", () => {
+    const { getByText } = render(<PrismaFlowView flow={flow} />);
+    // Clinical screen exclusions branch off the screening stage…
+    expect(getByText("Excluded — clinical eligibility")).toBeInTheDocument();
+    expect(getByText("Ineligible population")).toBeInTheDocument();
+    // …data exclusions branch off the eligibility-assessment stage.
+    expect(getByText("Excluded — no usable data")).toBeInTheDocument();
   });
 
   it("surfaces the synthesis note when the pool was withheld", () => {
@@ -61,6 +70,7 @@ describe("PrismaFlowView", () => {
     const { queryByText } = render(<PrismaFlowView flow={clean} />);
     expect(queryByText("Duplicates removed")).toBeNull();
     expect(queryByText("Reports not retrieved")).toBeNull();
-    expect(queryByText("Records excluded")).toBeNull();
+    expect(queryByText("Excluded — clinical eligibility")).toBeNull();
+    expect(queryByText("Excluded — no usable data")).toBeNull();
   });
 });

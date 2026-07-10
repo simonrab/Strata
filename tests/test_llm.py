@@ -39,7 +39,7 @@ class _StubSearch:
     def __init__(self, candidates):
         self._candidates = candidates
 
-    def search_studies(self, query, page_size=20):
+    def search_studies(self, query, page_size=20, interventional_only=False):
         return [{"nct_id": c.nct_id, "title": c.title} for c in self._candidates]
 
 

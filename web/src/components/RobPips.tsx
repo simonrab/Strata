@@ -14,7 +14,7 @@ const OVERALL_LABEL: Record<RobJudgment, string> = {
   low: "Low",
   some_concerns: "Some",
   high: "High",
-  pending: "Pending",
+  pending: "Awaiting",
 };
 
 export function RobPips({
@@ -35,7 +35,7 @@ export function RobPips({
         {OVERALL_LABEL[overall]}
       </span>
       <div
-        className={`flex gap-[2px] rounded-sm hairline bg-white p-[2px] ${
+        className={`flex gap-[2px] rounded-sm hairline bg-card-light p-[2px] ${
           overall === "pending" ? "opacity-50" : ""
         }`}
         aria-label={`risk of bias ${OVERALL_LABEL[overall].toLowerCase()}`}

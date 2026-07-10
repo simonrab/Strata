@@ -80,7 +80,7 @@ export function Ask() {
         rows={3}
         aria-label="Clinical question"
         placeholder="e.g. In adults with type 2 diabetes, do GLP-1 receptor agonists reduce MACE versus placebo?"
-        className="mt-6 w-full rounded-md hairline bg-card-light p-4 font-serif text-[18px] leading-7 text-ink-light outline-none focus:border-accent"
+        className="mt-6 w-full rounded-md hairline bg-card-light p-4 text-[18px] leading-7 text-ink-light outline-none focus:border-accent"
       />
 
       <div className="mt-3 flex items-center gap-4">
@@ -97,7 +97,7 @@ export function Ask() {
       {parsed && (
         <div className="mt-8 rounded-md hairline bg-card-light p-6">
           <p className="text-label-caps uppercase text-ink-muted-light">
-            Parsed PICO — edit any field before running
+            Parsed PICO · edit any field before running
           </p>
           <dl className="mt-4 grid grid-cols-2 gap-x-8 gap-y-4">
             {PICO_FIELDS.map(([key, label]) => (
@@ -131,7 +131,7 @@ export function Ask() {
             >
               {MEASURES.map(([value, label]) => (
                 <option key={value} value={value}>
-                  {value} — {label}
+                  {value} · {label}
                 </option>
               ))}
             </select>
