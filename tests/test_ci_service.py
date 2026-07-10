@@ -44,6 +44,22 @@ def test_get_landscape_seeds_ctgov_and_caches(tmp_path):
     assert calls["n"] == 1
 
 
+def test_refresh_clears_stale_cache_and_reseeds(tmp_path):
+    store = SnapshotStore(data_dir=tmp_path)
+    # First seed carries a stale/off-target asset (the pre-fix query.term era).
+    stale = _search([_study(nct="NCT1", interventions=(("DRUG", "Karolinska Cocktail"),))])
+    ls = service.get_landscape(store, "Obesity", search_pipeline=stale)
+    assert "Karolinska Cocktail" in ls.assets
+
+    # A refresh drops the cache and re-pulls from the (now clean) search.
+    fresh = _search([_study(nct="NCT2", interventions=(("DRUG", "Semaglutide"),))])
+    refreshed = service.get_landscape(
+        store, "Obesity", search_pipeline=fresh, refresh=True
+    )
+    assert "Semaglutide" in refreshed.assets
+    assert "Karolinska Cocktail" not in refreshed.assets
+
+
 def test_as_of_reconstructs_earlier_pipeline(tmp_path):
     store = SnapshotStore(data_dir=tmp_path)
     study = _study(

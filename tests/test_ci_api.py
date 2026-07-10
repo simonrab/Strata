@@ -38,6 +38,37 @@ def test_landscape_endpoint_returns_matrix(client):
     assert len(body["cells"]) == 2
 
 
+def test_landscape_refresh_reseeds_from_a_clean_search(tmp_path):
+    store = SnapshotStore(data_dir=tmp_path)
+    # The live search swaps its result to simulate the query.cond fix landing
+    # between the stale first seed and the refresh.
+    state = {
+        "studies": [_study(nct="NCT9", conditions=("Obesity",),
+                           interventions=(("DRUG", "Karolinska Cocktail"),))]
+    }
+    app.dependency_overrides[get_store] = lambda: store
+    app.dependency_overrides[get_ci_search] = lambda: (lambda cond: state["studies"])
+    try:
+        c = TestClient(app)
+        seeded = c.get("/api/landscape", params={"condition": "Obesity"}).json()
+        assert "Karolinska Cocktail" in seeded["assets"]
+
+        state["studies"] = [_study(nct="NCT10", conditions=("Obesity",),
+                                   interventions=(("DRUG", "Semaglutide"),))]
+        # Without refresh, the stale cache is served.
+        cached = c.get("/api/landscape", params={"condition": "Obesity"}).json()
+        assert "Karolinska Cocktail" in cached["assets"]
+
+        refreshed = c.get(
+            "/api/landscape", params={"condition": "Obesity", "refresh": "true"}
+        ).json()
+        assert "Semaglutide" in refreshed["assets"]
+        assert "Karolinska Cocktail" not in refreshed["assets"]
+    finally:
+        app.dependency_overrides.pop(get_store, None)
+        app.dependency_overrides.pop(get_ci_search, None)
+
+
 def test_landscape_as_of_filters_future_events(client):
     # Seed first, then ask for a date before either trial started.
     client.get("/api/landscape", params={"condition": "Type 2 Diabetes"})

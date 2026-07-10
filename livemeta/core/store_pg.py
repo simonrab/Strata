@@ -316,6 +316,19 @@ class PostgresSnapshotStore:
             ).fetchall()
         return [DevelopmentEvent.model_validate_json(r["event_json"]) for r in rows]
 
+    def clear_events(self, landscape_id: str) -> None:
+        """Drop a landscape's cached CT.gov events so it re-seeds from a fresh search.
+
+        Mirrors SnapshotStore.clear_events — `save_events` only upserts, so a
+        stale cache is cleaned by deleting it and re-pulling. Scoped to
+        CT.gov-sourced events so ingested announcements/filings survive.
+        """
+        with self._connect() as conn:
+            conn.execute(
+                "DELETE FROM development_events WHERE landscape_id = %s AND source_type = %s",
+                (landscape_id, "ctgov"),
+            )
+
     def save_link(
         self, landscape_id: str, asset_name: str, indication: str, question_id: str
     ) -> None:
