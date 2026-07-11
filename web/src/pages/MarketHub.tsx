@@ -7,6 +7,8 @@ import { MarketResult } from "../components/MarketResult";
 // The market-intelligence front door. Ask in plain language; the router picks the
 // right tool and this renders that tool's real view inline, with a grounded
 // narrative and follow-up chips. Deterministic figures — the model only routes.
+// The prompt box mirrors the "New review" (Ask) box: a large rounded card with a
+// textarea and an inline accent send button.
 
 interface Turn {
   question: string;
@@ -27,6 +29,8 @@ export function MarketHub() {
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
 
+  const empty = turns.length === 0;
+
   async function ask(text: string) {
     const q = text.trim();
     if (!q || busy) return;
@@ -44,17 +48,53 @@ export function MarketHub() {
     }
   }
 
-  return (
-    <div className="mx-auto flex min-h-screen max-w-4xl flex-col px-8 py-10">
-      <div className="mb-6">
-        <h1 className="font-sans text-display-lg text-ink-light">Market Intelligence</h1>
-        <p className="mt-1 font-serif text-[16px] text-ink-muted-light">
-          Ask about assets, indications, timing, or what moved — in plain language.
-        </p>
-      </div>
+  // The prompt box, styled to mirror the New review (Ask) box.
+  const promptBox = (rows: number) => (
+    <div className="relative rounded-2xl hairline bg-card-light shadow-sm transition-colors focus-within:border-accent">
+      <textarea
+        value={input}
+        onChange={(e) => setInput(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault();
+            ask(input);
+          }
+        }}
+        rows={rows}
+        aria-label="market question"
+        placeholder="Ask about assets, indications, timing, or what moved…"
+        className="max-h-64 w-full resize-none overflow-y-auto rounded-2xl bg-transparent p-4 pr-14 text-left text-[16px] leading-7 text-ink-light outline-none placeholder:text-ink-muted-light"
+      />
+      <button
+        onClick={() => ask(input)}
+        disabled={!input.trim() || busy}
+        aria-label="send"
+        title="Send (↵)"
+        className="absolute bottom-3 right-3 inline-flex h-9 w-9 items-center justify-center rounded-full bg-accent text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+      >
+        <Icon name={busy ? "more_horiz" : "arrow_upward"} size={18} />
+      </button>
+    </div>
+  );
 
-      {turns.length === 0 && (
-        <div className="mb-6 flex flex-wrap gap-2">
+  // Empty state: a centered hero, mirroring the New review page.
+  if (empty) {
+    return (
+      <div className="mx-auto flex min-h-[82vh] max-w-2xl flex-col items-center justify-center px-6 pb-16 text-center">
+        <p className="text-label-caps uppercase text-ink-muted-light">Market intelligence</p>
+        <h1 className="mt-3 font-sans text-display-lg text-ink-light">
+          What do you want to know about the market?
+        </h1>
+
+        <div className="mt-8 w-full">
+          {promptBox(4)}
+          <p className="mt-3 text-[12px] text-ink-muted-light">
+            Competitive pipeline intelligence over live ClinicalTrials.gov — a research tool,
+            not medical advice.
+          </p>
+        </div>
+
+        <div className="mt-6 flex flex-wrap justify-center gap-2">
           {STARTERS.map((s) => (
             <button
               key={s}
@@ -66,8 +106,13 @@ export function MarketHub() {
             </button>
           ))}
         </div>
-      )}
+      </div>
+    );
+  }
 
+  // Active state: transcript above, the same prompt box docked below.
+  return (
+    <div className="mx-auto flex min-h-screen max-w-3xl flex-col px-6 py-10">
       <div className="flex-1 space-y-6">
         {turns.map((turn, i) => (
           <div key={i}>
@@ -121,29 +166,7 @@ export function MarketHub() {
         ))}
       </div>
 
-      <form
-        className="sticky bottom-6 mt-6 flex items-center gap-2 rounded-full hairline bg-card-light py-1.5 pl-4 pr-1.5"
-        onSubmit={(e) => {
-          e.preventDefault();
-          ask(input);
-        }}
-      >
-        <input
-          aria-label="market question"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="Ask about assets, indications, timing, or what moved…"
-          className="flex-1 bg-transparent text-[14px] text-ink-light outline-none placeholder:text-ink-muted-light"
-        />
-        <button
-          type="submit"
-          disabled={busy || !input.trim()}
-          aria-label="send"
-          className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-on-primary disabled:opacity-40"
-        >
-          <Icon name="arrow_upward" size={18} />
-        </button>
-      </form>
+      <div className="sticky bottom-6 mt-6">{promptBox(2)}</div>
     </div>
   );
 }
