@@ -22,28 +22,12 @@ export const PHASE_ORDER: Phase[] = [
   "unknown",
 ];
 
-// How advanced each phase is, used to rank cards when capping so the late-stage
-// programs that matter are never dropped. Distinct from PHASE_ORDER (column
-// layout): here withdrawn/unknown rank lowest so a flood of phase-untagged
-// trials can't crowd out the real Phase 2/3/approved programs.
-const ADVANCEMENT_RANK: Record<Phase, number> = {
-  approved: 9,
-  filed: 8,
-  phase_4: 7,
-  phase_3: 6,
-  phase_2_3: 5,
-  phase_2: 4,
-  phase_1_2: 3,
-  phase_1: 2,
-  preclinical: 1,
-  withdrawn: 0,
-  unknown: -1,
-};
-
 // A broad scope (a company like Novo Nordisk, or a condition like "Obesity") can
-// return ~1000 assets. Cap the number of cards so the board stays responsive,
-// keeping the most advanced first.
-const MAX_CARDS = 120;
+// return ~1000 assets. Cap cards PER COLUMN rather than globally: a single global
+// cap, ordered by advancement, collapses a big pipeline into just its most-
+// advanced column (e.g. all Phase 4) and hides every earlier stage. A per-column
+// cap keeps every occupied stage visible and the board responsive.
+const COLUMN_CARD_LIMIT = 50;
 
 function AssetCard({
   cell,
@@ -117,29 +101,28 @@ export const PipelineBoard = memo(function PipelineBoard({
   // Passed through to each card's Timeline chip; omitted for the company board.
   condition?: string;
 }) {
-  const { columns, truncated, total } = useMemo(() => {
+  const { columns, hiddenTotal } = useMemo(() => {
     const cells = (allCells ?? []).filter(
       (c) => indication === null || c.indication === indication
     );
-    const total = cells.length;
-    // Keep the most-advanced cells first when capping, so the cap never hides
-    // the late-stage programs that matter most.
-    const shown = [...cells]
-      .sort((a, b) => ADVANCEMENT_RANK[b.current_phase] - ADVANCEMENT_RANK[a.current_phase])
-      .slice(0, MAX_CARDS);
 
     const byPhase = new Map<Phase, LandscapeCell[]>();
-    for (const c of shown) {
+    for (const c of cells) {
       const list = byPhase.get(c.current_phase) ?? [];
       list.push(c);
       byPhase.set(c.current_phase, list);
     }
-    // Only render columns that actually hold an asset, in phase order.
-    const columns = PHASE_ORDER.filter((p) => byPhase.has(p)).map((phase) => ({
-      phase,
-      cells: byPhase.get(phase)!.sort((a, b) => a.asset_name.localeCompare(b.asset_name)),
-    }));
-    return { columns, truncated: total > MAX_CARDS, total };
+    // One column per occupied phase, in phase order. Each column is capped
+    // independently so no stage can crowd out another; overflow is surfaced as a
+    // per-column "+N more" rather than silently dropped.
+    let hiddenTotal = 0;
+    const columns = PHASE_ORDER.filter((p) => byPhase.has(p)).map((phase) => {
+      const all = byPhase.get(phase)!.sort((a, b) => a.asset_name.localeCompare(b.asset_name));
+      const hidden = Math.max(0, all.length - COLUMN_CARD_LIMIT);
+      hiddenTotal += hidden;
+      return { phase, cells: all.slice(0, COLUMN_CARD_LIMIT), total: all.length, hidden };
+    });
+    return { columns, hiddenTotal };
   }, [allCells, indication]);
 
   if (columns.length === 0) {
@@ -153,13 +136,14 @@ export const PipelineBoard = memo(function PipelineBoard({
 
   return (
     <div className="rounded-md hairline bg-surface-container-low p-3">
-      {truncated && (
+      {hiddenTotal > 0 && (
         <p className="mb-2 px-1 text-[12px] text-ink-muted-light">
-          Showing the {MAX_CARDS} most-advanced of {total} programs — filter by indication to focus.
+          Showing up to {COLUMN_CARD_LIMIT} programs per stage; {hiddenTotal} more are hidden —
+          filter by indication to focus.
         </p>
       )}
       <div className="flex gap-3 overflow-x-auto pb-1" data-testid="pipeline-board">
-        {columns.map(({ phase, cells }) => (
+        {columns.map(({ phase, cells, total, hidden }) => (
           <div
             key={phase}
             data-testid={`phase-col-${phase}`}
@@ -167,7 +151,7 @@ export const PipelineBoard = memo(function PipelineBoard({
           >
             <div className="mb-2 flex items-center justify-between px-1">
               <StagePill phase={phase} />
-              <span className="text-[11px] font-medium text-ink-muted-light">{cells.length}</span>
+              <span className="text-[11px] font-medium text-ink-muted-light">{total}</span>
             </div>
             <div className="flex flex-col gap-2">
               {cells.map((cell) => (
@@ -178,6 +162,11 @@ export const PipelineBoard = memo(function PipelineBoard({
                 />
               ))}
             </div>
+            {hidden > 0 && (
+              <p className="mt-2 px-1 text-[11px] text-ink-muted-light">
+                +{hidden} more — filter to see
+              </p>
+            )}
           </div>
         ))}
       </div>
