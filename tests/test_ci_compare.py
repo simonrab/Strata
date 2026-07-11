@@ -127,6 +127,8 @@ def test_compare_counts_statuses_and_shows_the_phase_spread(tmp_path):
             _study_full("N3", "DrugX", phase="PHASE4", status="ACTIVE_NOT_RECRUITING"),
             # An observational registry — no phase → falls under NA, not "Phase 4".
             _study_full("N4", "DrugX", phase="NA", status="RECRUITING"),
+            # A halted trial — counted as Terminated, not Running/Completed.
+            _study_full("N5", "DrugX", phase="PHASE3", status="TERMINATED"),
         ],
     }
     result = compare.compare_assets(
@@ -134,8 +136,9 @@ def test_compare_counts_statuses_and_shows_the_phase_spread(tmp_path):
         search=lambda a: catalog["DrugX"], as_of="2026-01-01",
     )
     rows = {r.label: r for r in result.rows}
-    assert rows["Trials"].values[0] == "4"
+    assert rows["Trials"].values[0] == "5"
     assert rows["Running"].values[0] == "3"  # RECRUITING×2 + ACTIVE_NOT_RECRUITING
     assert rows["Completed"].values[0] == "1"
+    assert rows["Terminated"].values[0] == "1"
     # The distribution is visible — Ph3, Ph4, and NA all show, not a single "Phase 4".
-    assert rows["Phases"].values[0] == "Ph3 2 · Ph4 1 · NA 1"
+    assert rows["Phases"].values[0] == "Ph3 3 · Ph4 1 · NA 1"

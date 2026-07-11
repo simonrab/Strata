@@ -35,6 +35,21 @@ describe("ChangeFeed", () => {
     expect(screen.getByText("Advanced")).toBeTruthy();
   });
 
+  it("renders a setback (halt) with its reason", () => {
+    const diff: LandscapeDiff = {
+      condition: "Obesity", since: null, until: null, notes: [],
+      changes: [
+        {
+          asset_name: "DrugX", indication: "Obesity", change_type: "setback",
+          date: "2026-05-01", summary: "Terminated — lack of efficacy", provenance: [],
+        },
+      ],
+    };
+    wrap(<ChangeFeed diff={diff} />);
+    expect(screen.getByText("Setback")).toBeTruthy();
+    expect(screen.getByText(/lack of efficacy/i)).toBeTruthy();
+  });
+
   it("shows an empty state when nothing moved", () => {
     const diff: LandscapeDiff = { condition: "Obesity", since: null, until: null, changes: [], notes: [] };
     wrap(<ChangeFeed diff={diff} />);

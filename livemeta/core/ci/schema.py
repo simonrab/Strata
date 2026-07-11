@@ -62,6 +62,7 @@ class EventType(str, Enum):
     TRIAL_START = "trial_start"
     TRIAL_STATUS = "trial_status"
     READOUT = "readout"
+    SETBACK = "setback"  # a trial halted: terminated / withdrawn / suspended
     FILING = "filing"
     APPROVAL = "approval"
     ANNOUNCEMENT = "announcement"
@@ -400,6 +401,7 @@ class ChangeType(str, Enum):
     NEW_PROGRAM = "new_program"
     ADVANCED = "advanced"
     READOUT = "readout"
+    SETBACK = "setback"  # a trial halted (terminated / withdrawn / suspended)
     EVIDENCE_MOVED = "evidence_moved"
     CONFLICT_OPENED = "conflict_opened"
 

@@ -83,7 +83,7 @@ export function MarketHub() {
       <div className="mx-auto flex min-h-screen max-w-2xl flex-col items-center justify-center px-6 py-10 text-center">
         <p className="text-label-caps uppercase text-ink-muted-light">Market intelligence</p>
         <h1 className="mt-3 font-sans text-display-lg text-ink-light">
-          What do you want to know about the market?
+          What do you want to know about the clinical trial landscape?
         </h1>
 
         <div className="mt-8 w-full">

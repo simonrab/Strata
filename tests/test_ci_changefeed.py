@@ -126,6 +126,24 @@ def test_no_evidence_move_when_no_new_version_in_window():
 # --- end-to-end -------------------------------------------------------------
 
 
+def test_landscape_changes_surfaces_a_setback_with_its_reason(tmp_path):
+    store = SnapshotStore(data_dir=tmp_path)
+    studies = [
+        _study(nct="NCT1", conditions=("Obesity",), phases=("PHASE3",), status="TERMINATED",
+               start="2020-01", primary_completion="2021-06", why_stopped="Lack of efficacy",
+               interventions=(("DRUG", "DrugX"),)),
+    ]
+    diff = cf.landscape_changes(
+        store, "Obesity", since="2020-06-01", until="2022-01-01",
+        search_pipeline=lambda c: studies,
+    )
+    setback = next(c for c in diff.changes if c.change_type == ChangeType.SETBACK)
+    assert setback.asset_name == "DrugX"
+    assert "Lack of efficacy" in setback.summary
+    # A halt is never reported as a readout.
+    assert not any(c.change_type == ChangeType.READOUT for c in diff.changes)
+
+
 def test_landscape_changes_surfaces_a_real_advance_between_two_dates(tmp_path):
     store = SnapshotStore(data_dir=tmp_path)
     studies = [

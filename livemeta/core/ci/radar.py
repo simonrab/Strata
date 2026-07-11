@@ -11,7 +11,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from datetime import date
 
-from .ctgov_pipeline import study_to_trial_detail
+from .ctgov_pipeline import HALTED_STATUSES, study_to_trial_detail
 from .schema import Milestone, MilestoneKind, MilestoneRadar, TrialDetail
 
 
@@ -74,6 +74,9 @@ def milestone_radar(
     milestones: list[Milestone] = []
     for study in studies:
         trial = study_to_trial_detail(study)
+        # A halted trial won't read out, even with a future completion date.
+        if (trial.status or "").upper() in HALTED_STATUSES:
+            continue
         pcd = trial.primary_completion_date
         if not pcd or trial.has_results:
             continue

@@ -42,6 +42,9 @@ def test_radar_keeps_future_unreported_readouts_within_horizon(tmp_path):
         # Beyond the 12-month horizon — dropped.
         _study(nct="NCT4", conditions=("Obesity",), phases=("PHASE2",), status="RECRUITING",
                primary_completion="2028-01", interventions=(("DRUG", "FarDrug"),)),
+        # Terminated with a future completion date — a halted trial won't read out.
+        _study(nct="NCT5", conditions=("Obesity",), phases=("PHASE3",), status="TERMINATED",
+               primary_completion="2026-08", interventions=(("DRUG", "DeadDrug"),)),
     ]
     result = radar.milestone_radar(
         store, "Obesity", search=lambda c: studies, horizon_months=12, as_of="2026-01-01"

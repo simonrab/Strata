@@ -26,7 +26,15 @@ def _study(
     sponsor_class="INDUSTRY",
     conditions=("Type 2 Diabetes",),
     interventions=(("DRUG", "Semaglutide"), ("DRUG", "Placebo")),
+    why_stopped=None,
 ):
+    status_module = {
+        "overallStatus": status,
+        "startDateStruct": {"date": start},
+        "primaryCompletionDateStruct": {"date": primary_completion},
+    }
+    if why_stopped is not None:
+        status_module["whyStopped"] = why_stopped
     return {
         "protocolSection": {
             "identificationModule": {"nctId": nct, "briefTitle": title},
@@ -34,11 +42,7 @@ def _study(
                 "leadSponsor": {"name": sponsor, "class": sponsor_class}
             },
             "designModule": {"phases": list(phases)},
-            "statusModule": {
-                "overallStatus": status,
-                "startDateStruct": {"date": start},
-                "primaryCompletionDateStruct": {"date": primary_completion},
-            },
+            "statusModule": status_module,
             "conditionsModule": {"conditions": list(conditions)},
             "armsInterventionsModule": {
                 "interventions": [{"type": t, "name": n} for t, n in interventions]
@@ -90,6 +94,31 @@ def test_readout_only_when_completed_with_a_date():
     kinds = {e.event_type for e in cp.study_to_events(ongoing)}
     assert EventType.READOUT not in kinds
     assert EventType.TRIAL_START in kinds
+
+
+def test_terminated_is_a_setback_with_the_reason_not_a_readout():
+    study = _study(status="TERMINATED", why_stopped="Lack of efficacy")
+    events = cp.study_to_events(study)
+    kinds = {e.event_type for e in events}
+    # A halt must NOT masquerade as a readout.
+    assert EventType.READOUT not in kinds
+    assert EventType.SETBACK in kinds
+    setback = next(e for e in events if e.event_type == EventType.SETBACK)
+    # The CT.gov reason is carried through, so "lack of efficacy" is visible.
+    assert "Lack of efficacy" in setback.provenance[0].snippet
+    assert setback.status == "TERMINATED"
+
+
+def test_withdrawn_and_suspended_are_setbacks():
+    for status in ("WITHDRAWN", "SUSPENDED"):
+        kinds = {e.event_type for e in cp.study_to_events(_study(status=status))}
+        assert EventType.SETBACK in kinds
+
+
+def test_completed_still_reads_out_not_a_setback():
+    kinds = {e.event_type for e in cp.study_to_events(_study(status="COMPLETED"))}
+    assert EventType.READOUT in kinds
+    assert EventType.SETBACK not in kinds
 
 
 def test_indication_picks_the_condition_matching_the_landscape_focus():

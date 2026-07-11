@@ -557,6 +557,7 @@ export type ChangeType =
   | "new_program"
   | "advanced"
   | "readout"
+  | "setback"
   | "evidence_moved"
   | "conflict_opened";
 

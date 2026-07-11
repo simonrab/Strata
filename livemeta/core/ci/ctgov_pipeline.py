@@ -32,7 +32,11 @@ _PHASE_MAP: dict[frozenset[str], Phase] = {
 }
 
 # Statuses that mean the trial has read out (so a READOUT event is warranted).
-_COMPLETED_STATUSES = {"COMPLETED", "TERMINATED"}
+# TERMINATED is deliberately NOT here — a halt is a setback, not a readout.
+_COMPLETED_STATUSES = {"COMPLETED"}
+
+# Statuses that mean the trial was halted — a failure/discontinuation signal.
+HALTED_STATUSES = {"TERMINATED", "WITHDRAWN", "SUSPENDED"}
 
 # Intervention arms that are not the asset under study — placebos, controls, and
 # vehicles/diluents that show up as DRUG arms but carry no active competitor.
@@ -106,6 +110,13 @@ def _focus_condition(study: dict, focus: str | None) -> str:
 def _sponsor(study: dict) -> tuple[str | None, str | None]:
     lead = _protocol(study).get("sponsorCollaboratorsModule", {}).get("leadSponsor", {})
     return lead.get("name"), lead.get("class")
+
+
+def _why_stopped(study: dict) -> str | None:
+    """CT.gov's free-text reason a trial was halted (e.g. 'lack of efficacy',
+    'safety', 'business decision', 'slow enrollment') — the key failure signal."""
+    reason = (_protocol(study).get("statusModule", {}).get("whyStopped") or "").strip()
+    return reason or None
 
 
 def _asset_name(study: dict) -> str | None:
@@ -225,6 +236,21 @@ def study_to_events(
                 f"{asset} {phase.value} trial for {indication} read out ({overall})",
             )
         )
+
+    # A halt is a distinct, sourced failure signal — not a readout. Carry the
+    # CT.gov reason so "Terminated — lack of efficacy" reads differently from
+    # "Terminated — business decision".
+    if overall in HALTED_STATUSES:
+        reason = _why_stopped(study)
+        halt_date = (
+            primary_completion
+            or _norm_date(status_mod.get("lastUpdatePostDateStruct"))
+            or start
+        )
+        status_word = overall.replace("_", " ").title()
+        note = f"{status_word}{f' — {reason}' if reason else ''}"
+        events.append(_event(EventType.SETBACK, halt_date, note))
+
     return events
 
 

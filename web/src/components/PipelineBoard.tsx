@@ -39,6 +39,7 @@ function AssetCard({
   condition?: string;
 }) {
   const readOut = cell.latest_event?.event_type === "readout";
+  const halted = cell.latest_event?.event_type === "setback";
   return (
     <div className="rounded-md hairline bg-card-light p-2.5" data-testid="asset-card">
       <div className="flex items-start justify-between gap-1">
@@ -70,6 +71,14 @@ function AssetCard({
       {readOut && (
         <span className="mt-1 inline-flex items-center gap-0.5 text-[10px] text-risk-low">
           <Icon name="check_circle" size={11} label="has read out" /> Read out
+        </span>
+      )}
+      {halted && (
+        <span
+          className="mt-1 inline-flex items-center gap-0.5 text-[10px] text-risk-high"
+          title={cell.latest_event?.provenance?.[0]?.snippet ?? "Trial halted"}
+        >
+          <Icon name="cancel" size={11} label="trial halted" /> Halted
         </span>
       )}
       {condition && (

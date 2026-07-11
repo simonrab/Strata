@@ -18,6 +18,7 @@ from collections.abc import Callable
 
 from .schema import (
     ChangeType,
+    DevelopmentEvent,
     EventType,
     Landscape,
     LandscapeCell,
@@ -132,6 +133,35 @@ def diff_landscapes(
     return changes
 
 
+def _setback_changes(
+    events: list[DevelopmentEvent], since: str | None, until: str | None
+) -> list[LandscapeChange]:
+    """Halts (terminated/withdrawn/suspended) that landed in the window.
+
+    Scanned from the stored events rather than the cell's single `latest_event`,
+    which can hide a setback behind a later trial start for the same asset."""
+    out: list[LandscapeChange] = []
+    for e in events:
+        if e.event_type != EventType.SETBACK or e.date is None:
+            continue
+        if since is not None and e.date <= since:
+            continue
+        if until is not None and e.date > until:
+            continue
+        summary = e.provenance[0].snippet if e.provenance else "Trial halted"
+        out.append(
+            LandscapeChange(
+                asset_name=e.asset_name,
+                indication=e.indication,
+                change_type=ChangeType.SETBACK,
+                date=e.date,
+                summary=summary,
+                provenance=list(e.provenance),
+            )
+        )
+    return out
+
+
 def _evidence_change(
     asset: str,
     indication: str,
@@ -204,16 +234,20 @@ def landscape_changes(
     CT.gov events on first access), diffs the cells, then layers on evidence moves
     from each linked review's version history. Newest change first.
     """
-    from .service import get_landscape
+    from .service import get_landscape, slugify
 
     prev = get_landscape(store, condition, as_of=since, search_pipeline=search_pipeline)
     curr = get_landscape(store, condition, as_of=until)
 
-    # Only the competitive (cell-derivable) moves. Pooled-evidence moves are not
-    # surfaced on the market-intelligence layer — that belongs to the review pages
-    # — so the review-history scan is skipped here too. `_evidence_change` remains
-    # for any caller that does want it.
+    # Competitive (cell-derivable) moves — advances, new programs, readouts,
+    # conflicts. Pooled-evidence moves are not surfaced on the market layer (that
+    # belongs to the review pages); `_evidence_change` remains for callers that want it.
     changes = diff_landscapes(prev, curr, since=since, until=until)
+
+    # Setbacks (halts) are scanned from the stored events, so a termination isn't
+    # hidden behind a later trial start on the same cell.
+    changes.extend(_setback_changes(store.load_events(slugify(condition)), since, until))
+
     changes.sort(key=lambda c: (c.date or "", c.asset_name), reverse=True)
 
     return LandscapeDiff(

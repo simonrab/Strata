@@ -11,6 +11,7 @@ const TYPE_STYLE: Record<ChangeType, { tone: string; icon: string; label: string
   advanced: { tone: "bg-accent-container text-on-accent-container", icon: "arrow_upward", label: "Advanced" },
   new_program: { tone: "bg-accent-container text-on-accent-container", icon: "add", label: "New program" },
   readout: { tone: "bg-risk-low-container text-risk-low", icon: "science", label: "Readout" },
+  setback: { tone: "bg-risk-high-container text-risk-high", icon: "cancel", label: "Setback" },
   evidence_moved: { tone: "bg-risk-low-container text-risk-low", icon: "trending_up", label: "Evidence moved" },
   conflict_opened: { tone: "bg-risk-some-container text-risk-some", icon: "warning", label: "Conflict opened" },
 };

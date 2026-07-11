@@ -19,6 +19,7 @@ from collections import Counter
 from collections.abc import Callable, Sequence
 from datetime import date
 
+from .ctgov_pipeline import HALTED_STATUSES
 from .link import plain_evidence
 from .schema import (
     AssetComparison,
@@ -103,6 +104,10 @@ def _count_completed(trials: Sequence[TrialDetail]) -> int:
     return sum(1 for t in trials if (t.status or "").upper() == "COMPLETED")
 
 
+def _count_terminated(trials: Sequence[TrialDetail]) -> int:
+    return sum(1 for t in trials if (t.status or "").upper() in HALTED_STATUSES)
+
+
 def _phase_spread(trials: Sequence[TrialDetail]) -> str:
     """A compact per-phase count, e.g. 'Ph2 5 · Ph3 8 · Ph4 12 · NA 40' — so the
     real distribution shows, not a single (misleading) 'most advanced' phase.
@@ -179,6 +184,11 @@ def compare_assets(
         _count_row("Trials", [len(trials_by_asset[a]) for a in assets]),
         _count_row("Running", [_count_running(trials_by_asset[a]) for a in assets]),
         _count_row("Completed", [_count_completed(trials_by_asset[a]) for a in assets]),
+        # No "more" marker on terminations — more halts is not a neutral "lead".
+        ComparisonRow(
+            label="Terminated",
+            values=[str(_count_terminated(trials_by_asset[a])) for a in assets],
+        ),
         ComparisonRow(label="Phases", values=[_phase_spread(trials_by_asset[a]) for a in assets]),
         ComparisonRow(
             label="FDA approvals", values=[_approvals_cell(dossiers[a]) for a in assets]
