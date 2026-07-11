@@ -1,7 +1,6 @@
 import { Link } from "react-router-dom";
 import type { MoaCluster, MoaLandscape } from "../lib/types";
 import { PHASE_LABEL, type Phase } from "../lib/types";
-import { EvidenceBadgeView } from "./EvidenceBadgeView";
 import { Icon } from "./Icon";
 
 // Mechanism-of-action clusters. Each card is one drug class with a phase
@@ -82,16 +81,10 @@ function ClusterCard({ cluster }: { cluster: MoaCluster }) {
             </span>
           )}
         </div>
-        {unclassified ? (
+        {unclassified && (
           <span className="inline-flex items-center gap-1 text-[11px] text-ink-muted-light">
             <Icon name="help" size={12} /> class not inferred with confidence
           </span>
-        ) : cluster.evidence ? (
-          <div className="w-full max-w-[16rem]">
-            <EvidenceBadgeView badge={cluster.evidence} />
-          </div>
-        ) : (
-          <span className="text-[11px] text-ink-muted-light">{cluster.plain_summary}</span>
         )}
       </div>
     </div>

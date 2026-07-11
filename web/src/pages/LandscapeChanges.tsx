@@ -89,7 +89,7 @@ export function LandscapeChanges() {
       <p className="mt-4 flex items-center gap-2 text-[12px] text-ink-muted-light">
         <Icon name="info" size={16} />
         Moves are computed by reconstructing the landscape at two dates — advances, new programs,
-        readouts, evidence shifts, and source conflicts — each traced to its source.
+        readouts, and source conflicts — each traced to its source.
       </p>
     </div>
   );

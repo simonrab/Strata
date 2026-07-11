@@ -63,18 +63,19 @@ describe("CompareView (safety)", () => {
     },
   };
 
-  it("shows the 'not directly comparable' banner and its reasons", () => {
+  it("shows operational rows only and no pooled evidence", () => {
     wrap(<CompareView comparison={comparison} />);
-    expect(screen.getByText(/not directly comparable/i)).toBeTruthy();
-    expect(screen.getByText(/no common comparator/i)).toBeTruthy();
+    expect(screen.getByText("Lead phase")).toBeTruthy();
+    // Pooled evidence is not shown on the market-intelligence surface.
+    expect(screen.queryByText(/Pooled evidence/i)).toBeNull();
+    expect(screen.queryByText(/not directly comparable/i)).toBeNull();
+    expect(screen.queryByText(/benefit proven/i)).toBeNull();
   });
 
-  it("renders the neutral 'more' marker on operational counts only", () => {
+  it("renders the neutral 'more' marker on operational counts", () => {
     wrap(<CompareView comparison={comparison} />);
     // The larger enrollment carries a neutral marker (a fact), not a verdict.
     expect(screen.getByText("(more)")).toBeTruthy();
-    // Efficacy is never turned into a comparison row.
-    expect(screen.queryByText(/^Estimate$/)).toBeNull();
   });
 });
 

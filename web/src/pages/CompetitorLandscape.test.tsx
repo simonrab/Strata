@@ -98,14 +98,14 @@ describe("CompetitorLandscape", () => {
     expect(within(phase2).queryByText("Semaglutide")).not.toBeInTheDocument();
   });
 
-  it("shows the pooled evidence badge and the homogeneity-gate state on the cards", async () => {
+  it("does not show pooled meta-analysis evidence on the market-intelligence surface", async () => {
     vi.mocked(getLandscape).mockResolvedValue(landscape);
     renderPage();
-    expect(await screen.findByTestId("evidence-pooled")).toHaveTextContent(
-      "HR 0.86 [0.79, 0.93]"
-    );
-    expect(screen.getByTestId("evidence-pooled")).toHaveTextContent(/GRADE moderate/);
-    expect(screen.getByTestId("evidence-gate")).toBeInTheDocument();
+    // Even though the cells carry evidence data, the market view never renders it —
+    // pooled evidence lives in the review pages.
+    await screen.findByText("Semaglutide");
+    expect(screen.queryByTestId("evidence-pooled")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("evidence-gate")).not.toBeInTheDocument();
   });
 
   it("links the card name to the full asset dossier and keeps the condition timeline chip", async () => {

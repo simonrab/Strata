@@ -16,7 +16,6 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-from .link import plain_evidence
 from .schema import (
     ChangeType,
     EventType,
@@ -205,20 +204,16 @@ def landscape_changes(
     CT.gov events on first access), diffs the cells, then layers on evidence moves
     from each linked review's version history. Newest change first.
     """
-    from .service import get_landscape, slugify
+    from .service import get_landscape
 
     prev = get_landscape(store, condition, as_of=since, search_pipeline=search_pipeline)
     curr = get_landscape(store, condition, as_of=until)
 
+    # Only the competitive (cell-derivable) moves. Pooled-evidence moves are not
+    # surfaced on the market-intelligence layer — that belongs to the review pages
+    # — so the review-history scan is skipped here too. `_evidence_change` remains
+    # for any caller that does want it.
     changes = diff_landscapes(prev, curr, since=since, until=until)
-
-    links = store.load_links(slugify(condition))
-    for (asset, indication), qid in links.items():
-        change = _evidence_change(asset, indication, store.list_snapshots(qid), since, until)
-        if change is not None:
-            changes.append(change)
-
-    # Newest first; undated changes sort last.
     changes.sort(key=lambda c: (c.date or "", c.asset_name), reverse=True)
 
     return LandscapeDiff(

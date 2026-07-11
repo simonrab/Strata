@@ -3,7 +3,6 @@ import { Link } from "react-router-dom";
 import type { LandscapeCell, Phase } from "../lib/types";
 import { Icon } from "./Icon";
 import { StagePill } from "./StagePill";
-import { EvidenceBadgeView } from "./EvidenceBadgeView";
 
 // Development phases in ascending order of advancement. This is the board's
 // column axis: fixed, ordered, and dense — every asset sits in exactly one of
@@ -73,7 +72,6 @@ function AssetCard({
           <Icon name="check_circle" size={11} label="has read out" /> Read out
         </span>
       )}
-      {cell.evidence && <EvidenceBadgeView badge={cell.evidence} />}
       {condition && (
         <Link
           to={`/landscape/asset/${encodeURIComponent(cell.asset_name)}?condition=${encodeURIComponent(condition)}`}

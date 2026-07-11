@@ -29,7 +29,7 @@ export function MoaClusters() {
       <div className="mb-6">
         <h1 className="font-sans text-display-lg text-ink-light">By mechanism</h1>
         <p className="mt-1 font-serif text-[16px] text-ink-muted-light">
-          The field grouped by drug class, with class-level evidence.
+          The field grouped by drug class.
         </p>
       </div>
 

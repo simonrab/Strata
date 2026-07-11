@@ -82,7 +82,7 @@ def test_answer_changes_routes_to_the_feed(tmp_path):
     assert "move" in a.narrative
 
 
-def test_answer_compare_abstains_in_narrative(tmp_path):
+def test_answer_compare_is_operational(tmp_path):
     store = SnapshotStore(data_dir=tmp_path)
     studies = [
         _study(nct="NCT1", conditions=("Obesity",), interventions=(("DRUG", "Tirzepatide"),)),
@@ -90,5 +90,6 @@ def test_answer_compare_abstains_in_narrative(tmp_path):
     ]
     a = ask.answer(store, "compare tirzepatide and semaglutide", deps=_deps(studies))
     assert a.tool == "compare"
-    assert a.result["comparability"]["directly_comparable"] is False
-    assert "not directly comparable" in a.narrative
+    # The narrative is operational — no pooled-evidence framing.
+    assert "stage" in a.narrative and "timing" in a.narrative
+    assert "pooled" not in a.narrative.lower()

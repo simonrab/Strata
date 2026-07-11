@@ -207,9 +207,7 @@ def answer(store, text: str, *, deps: MarketDeps | None = None) -> MarketAnswer:
             search=deps.search_asset, openfda=deps.openfda, llm_client=deps.llm_client,
         )
         result, narrative = _dump(cmp), (
-            f"Comparing {', '.join(q.assets[:4])} on stage, scale, and timing. "
-            "Their pooled estimates are shown in context, not ranked — the evidence "
-            "is not directly comparable."
+            f"Comparing {', '.join(q.assets[:4])} on stage, scale, geography, and timing."
         )
         suggestions = [f"What changed for {q.assets[0]}", f"Upcoming readouts for {q.assets[0]}"]
 

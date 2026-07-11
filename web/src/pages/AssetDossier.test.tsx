@@ -64,8 +64,9 @@ describe("AssetDossier", () => {
     // read as "not approved anywhere".
     expect(screen.getByText(/US FDA only/i)).toBeInTheDocument();
     expect(screen.getByText(/United States/)).toBeInTheDocument();
-    // pooled evidence badge from the sub-indication
-    expect(screen.getByTestId("evidence-pooled")).toHaveTextContent("HR 0.80 [0.72, 0.90]");
+    // Pooled evidence is not shown on the market-intelligence surface, even though
+    // the sub-indication carries a badge.
+    expect(screen.queryByTestId("evidence-pooled")).not.toBeInTheDocument();
   });
 
   it("links each approval out to its Drugs@FDA source page", async () => {

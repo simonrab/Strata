@@ -39,7 +39,10 @@ function groupByMonth(changes: LandscapeChange[]): [string, LandscapeChange[]][]
 }
 
 export function ChangeFeed({ diff }: { diff: LandscapeDiff }) {
-  if (diff.changes.length === 0) {
+  // Pooled-evidence moves are not shown on the market-intelligence surface.
+  const changes = diff.changes.filter((c) => c.change_type !== "evidence_moved");
+
+  if (changes.length === 0) {
     return (
       <div className="rounded-md hairline bg-card-light p-8 text-center text-[14px] text-ink-muted-light">
         Nothing moved in <span className="font-medium">{diff.condition}</span> over this window.
@@ -49,7 +52,7 @@ export function ChangeFeed({ diff }: { diff: LandscapeDiff }) {
 
   return (
     <div className="rounded-md hairline bg-card-light p-5">
-      {groupByMonth(diff.changes).map(([month, rows]) => (
+      {groupByMonth(changes).map(([month, rows]) => (
         <div key={month} className="mb-2">
           <div className="mb-2 text-label-caps uppercase text-ink-muted-light">{month}</div>
           {rows.map((c, i) => {

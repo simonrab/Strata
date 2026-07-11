@@ -37,7 +37,7 @@ export function AssetCompare() {
       <div className="mb-6">
         <h1 className="font-sans text-display-lg text-ink-light">Compare assets</h1>
         <p className="mt-1 font-serif text-[16px] text-ink-muted-light">
-          Two assets side by side on stage, scale, and timing — with evidence in context.
+          Two assets side by side on stage, scale, geography, and timing.
         </p>
       </div>
 
@@ -98,8 +98,8 @@ export function AssetCompare() {
 
       <p className="mt-4 flex items-center gap-2 text-[12px] text-ink-muted-light">
         <Icon name="info" size={16} />
-        Pooled estimates are shown in their own context, never ranked — comparing effect sizes across
-        separate trials would be an indirect comparison the method does not support.
+        Operational facts only — stage, trial, enrollment, geography, and timing, read from
+        ClinicalTrials.gov. Pooled efficacy evidence lives in the meta-analysis review pages.
       </p>
     </div>
   );

@@ -10,7 +10,6 @@ import type {
 } from "../lib/types";
 import { Icon } from "../components/Icon";
 import { StagePill } from "../components/StagePill";
-import { EvidenceBadgeView } from "../components/EvidenceBadgeView";
 import { SourceToggle, loadSources } from "../components/SourceToggle";
 import { ApprovalsList } from "../components/ApprovalsList";
 import { LoadingState } from "../components/Loading";
@@ -74,7 +73,6 @@ function SubIndicationCard({
             <StagePill key={p} phase={p as never} />
           ))}
         </div>
-        {group.evidence && <EvidenceBadgeView badge={group.evidence} />}
 
         {open && (
           <ul

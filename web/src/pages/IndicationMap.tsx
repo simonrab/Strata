@@ -4,7 +4,6 @@ import { getIndicationMap } from "../lib/api";
 import type { IndicationMap as IMap, Source } from "../lib/types";
 import { PHASE_LABEL } from "../lib/types";
 import { Icon } from "../components/Icon";
-import { EvidenceBadgeView } from "../components/EvidenceBadgeView";
 import { SourceToggle, loadSources } from "../components/SourceToggle";
 
 const PHASE_ORDER = ["preclinical", "phase_1", "phase_1_2", "phase_2", "phase_2_3", "phase_3", "phase_4", "filed", "approved"];
@@ -56,7 +55,6 @@ export function IndicationMap() {
                       {node.trial_count} trials · {node.assets.length} assets · {node.countries.length} countries
                     </p>
                   </div>
-                  {node.evidence && <EvidenceBadgeView badge={node.evidence} />}
                 </div>
 
                 <div className="mt-3 grid gap-4 md:grid-cols-2">
