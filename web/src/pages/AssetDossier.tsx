@@ -13,6 +13,7 @@ import { StagePill } from "../components/StagePill";
 import { EvidenceBadgeView } from "../components/EvidenceBadgeView";
 import { SourceToggle, loadSources } from "../components/SourceToggle";
 import { ApprovalsList } from "../components/ApprovalsList";
+import { LoadingState } from "../components/Loading";
 
 function Bar({ label, value, max }: { label: string; value: number; max: number }) {
   return (
@@ -159,7 +160,7 @@ export function AssetDossier() {
       </div>
 
       {error && <p className="mt-6 font-mono text-[13px] text-risk-high">Could not load the dossier.</p>}
-      {loading && !dossier && <p className="mt-6 font-mono text-[13px] text-ink-muted-light">Building dossier…</p>}
+      {loading && !dossier && <LoadingState label="Building dossier…" />}
 
       {dossier && (
         <>

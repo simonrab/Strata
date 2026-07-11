@@ -10,6 +10,7 @@ import {
   PipelineBoard,
 } from "../components/PipelineBoard";
 import { ApprovalsList } from "../components/ApprovalsList";
+import { LoadingState } from "../components/Loading";
 
 function Stat({ value, label }: { value: number; label: string }) {
   return (
@@ -84,9 +85,7 @@ export function CompanyPipeline() {
         </p>
       )}
 
-      {loading && !pipeline && (
-        <p className="font-mono text-[13px] text-ink-muted-light">Mapping the pipeline…</p>
-      )}
+      {loading && !pipeline && <LoadingState label="Mapping the pipeline…" />}
 
       {pipeline && pipeline.assets.length === 0 && !loading && (
         <div className="rounded-md hairline bg-card-light p-8 text-center text-[14px] text-ink-muted-light">

@@ -6,6 +6,7 @@ import { PHASE_LABEL } from "../lib/types";
 import { Icon } from "../components/Icon";
 import { StagePill } from "../components/StagePill";
 import { ProvenancePopover } from "../components/ProvenancePopover";
+import { LoadingState } from "../components/Loading";
 
 function eventLabel(e: DevelopmentEvent): string {
   const map: Record<string, string> = {
@@ -50,25 +51,38 @@ export function AssetProfile() {
         <Icon name="chevron_left" size={14} /> Landscape
       </Link>
 
-      <h1 className="font-sans text-display-lg text-ink-light">{decodeURIComponent(name)}</h1>
-      <p className="mt-1 font-serif text-[16px] text-ink-muted-light">
-        Development timeline in {condition || "all indications"}
-        {sponsor ? " · " : ""}
-        {sponsor && (
-          <Link
-            to={`/company/${encodeURIComponent(sponsor)}`}
-            className="text-accent hover:underline"
-            title={`See ${sponsor}'s entire pipeline`}
-          >
-            {sponsor}
-          </Link>
-        )}
-        .
-      </p>
+      <span className="text-label-caps uppercase text-ink-muted-light">Development timeline</span>
+      <div className="mt-1 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="font-sans text-display-lg text-ink-light">{decodeURIComponent(name)}</h1>
+          <p className="mt-1 font-serif text-[16px] text-ink-muted-light">
+            Dated milestones in {condition || "all indications"}
+            {sponsor ? " · " : ""}
+            {sponsor && (
+              <Link
+                to={`/company/${encodeURIComponent(sponsor)}`}
+                className="text-accent hover:underline"
+                title={`See ${sponsor}'s entire pipeline`}
+              >
+                {sponsor}
+              </Link>
+            )}
+            .
+          </p>
+        </div>
+        {/* This page is a timeline, not the asset page — link out to the full
+            dossier so the two aren't confused. */}
+        <Link
+          to={`/asset/${encodeURIComponent(name)}`}
+          className="inline-flex shrink-0 items-center gap-1.5 rounded-sm bg-ink-light px-3 py-2 text-[13px] font-medium text-canvas-light hover:opacity-90"
+          title={`Open the full dossier for ${decodeURIComponent(name)}`}
+        >
+          <Icon name="science" size={15} /> Full asset dossier
+          <Icon name="chevron_right" size={14} />
+        </Link>
+      </div>
 
-      {loading && (
-        <p className="mt-6 font-mono text-[13px] text-ink-muted-light">Loading timeline…</p>
-      )}
+      {loading && <LoadingState label="Loading timeline…" />}
 
       {error && !loading && (
         <p className="mt-6 font-mono text-[13px] text-risk-high">Could not load the timeline.</p>

@@ -8,6 +8,7 @@ import {
   MAX_YEAR,
   PipelineBoard,
 } from "../components/PipelineBoard";
+import { LoadingState } from "../components/Loading";
 
 export function CompetitorLandscape() {
   const [input, setInput] = useState("Obesity");
@@ -85,9 +86,7 @@ export function CompetitorLandscape() {
         </p>
       )}
 
-      {loading && !landscape && (
-        <p className="font-mono text-[13px] text-ink-muted-light">Mapping the landscape…</p>
-      )}
+      {loading && !landscape && <LoadingState label="Mapping the landscape…" />}
 
       {landscape && landscape.assets.length === 0 && !loading && (
         <div className="rounded-md hairline bg-card-light p-8 text-center text-[14px] text-ink-muted-light">
