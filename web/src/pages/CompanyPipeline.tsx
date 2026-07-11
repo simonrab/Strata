@@ -63,10 +63,7 @@ export function CompanyPipeline() {
       </Link>
 
       <h1 className="font-sans text-display-lg text-ink-light">{sponsor}</h1>
-      <p className="mt-1 font-serif text-[16px] text-ink-muted-light">
-        The full pipeline — every asset, at every phase, across all indications, with readouts and
-        FDA approvals.
-      </p>
+      <p className="mt-1 font-serif text-[16px] text-ink-muted-light">The pipeline.</p>
 
       {pipeline && pipeline.assets.length > 0 && (
         <div className="mt-5 flex flex-wrap gap-3">
