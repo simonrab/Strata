@@ -5,7 +5,8 @@ fallback keeps the locked demo running with no ANTHROPIC_API_KEY. These tests
 run fully offline with stub clients — the network and the model are never hit.
 """
 
-from livemeta.core import demo, llm
+from livemeta.core import llm
+from tests import glp1_fixtures as demo
 from livemeta.core.schema import PICO, TrialCandidate
 
 
@@ -46,11 +47,29 @@ class _StubSearch:
         return [{"nct_id": c.nct_id, "title": c.title} for c in self._candidates]
 
 
-def test_locked_demo_question_returns_demo_without_a_key():
-    q = llm.parse_question(demo.GLP1_MACE_QUESTION.text)
-    assert q.id == "glp1-mace"
-    # The demo question carries no curated trial list — it discovers on run.
-    assert q.trial_ids == []
+def test_demo_question_is_parsed_live_not_hardcoded():
+    # The GLP-1 MACE demo question goes through the same live parse as any other
+    # question — there is no short-circuit to a curated PICO. With a stub model and
+    # search it structures the PICO and discovers trials through the normal path.
+    parsed = llm.ParsedPICO(
+        population="Adults with type 2 diabetes or high cardiovascular risk",
+        intervention="GLP-1 receptor agonist",
+        comparator="Placebo",
+        outcome="3-point MACE",
+        measure="HR",
+    )
+    search = _StubSearch([TrialCandidate(nct_id="NCT01179048", title="LEADER")])
+
+    q = llm.parse_question(
+        demo.GLP1_MACE_QUESTION.text,
+        llm_client=_StubLLM(parsed=parsed),
+        search_client=search,
+    )
+
+    assert q.pico.intervention == "GLP-1 receptor agonist"
+    assert q.measure.value == "HR"
+    # Discovered through the live search, not a curated list.
+    assert q.trial_ids == ["NCT01179048"]
 
 
 def test_llm_parses_novel_question_and_searches_for_trials():

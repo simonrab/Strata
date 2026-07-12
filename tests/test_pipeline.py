@@ -8,7 +8,7 @@ altering poolability. These assertions guard that contract.
 import json
 from pathlib import Path
 
-from livemeta.core import demo
+from tests import glp1_fixtures as demo
 from livemeta.core.pipeline import repool_with_decisions, run_review_collect
 from livemeta.core.schema import EffectMeasure, PICO, PoolMethod, Question, ReviewDecision
 

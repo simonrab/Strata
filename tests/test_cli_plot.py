@@ -12,7 +12,7 @@ import pytest
 
 from livemeta.cli import plot as plot_mod
 from livemeta.cli.app import main
-from livemeta.core.demo import GLP1_MACE_QUESTION
+from tests.glp1_fixtures import GLP1_MACE_QUESTION
 from livemeta.core.pipeline import run_review_collect
 from livemeta.core.store import SnapshotStore
 
@@ -44,11 +44,13 @@ def test_write_forest_png_highlights_without_error(pool, tmp_path):
     assert out.read_bytes().startswith(_PNG_MAGIC)
 
 
-def test_run_demo_plot_flag_writes_png(tmp_path):
+def test_run_plot_flag_writes_png(tmp_path):
     out = tmp_path / "run.png"
     main(
-        argv=["run", "--demo", "--plot", str(out)],
+        argv=["run", "--question-text", GLP1_MACE_QUESTION.text, "--plot", str(out)],
         fetch_study=_fetch,
         store=SnapshotStore(tmp_path),
+        # The parsed question already carries its trials, so no discovery/network.
+        parse=lambda _t: GLP1_MACE_QUESTION,
     )
     assert out.read_bytes().startswith(_PNG_MAGIC)

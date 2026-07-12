@@ -5,10 +5,7 @@ import { MemoryRouter } from "react-router-dom";
 import { Ask } from "./Ask";
 
 const start = vi.fn();
-let reviewState: { question: unknown; start: typeof start } = {
-  question: null,
-  start,
-};
+let reviewState: { start: typeof start } = { start };
 vi.mock("../lib/review", () => ({
   useReview: () => reviewState,
 }));
@@ -18,7 +15,7 @@ import { parseQuestion } from "../lib/api";
 describe("Ask (dynamic PICO)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    reviewState = { question: null, start };
+    reviewState = { start };
   });
 
   it("parses free text into editable PICO chips", async () => {
@@ -56,17 +53,8 @@ describe("Ask (dynamic PICO)", () => {
     expect(screen.getByRole("button", { name: /Run review/i })).toBeInTheDocument();
   });
 
-  it("starts empty even when a previous review is loaded — no autofill", async () => {
-    reviewState = {
-      question: {
-        id: "glp1-mace",
-        text: "Demo MACE question?",
-        pico: { population: "p", intervention: "i", comparator: "c", outcome: "o" },
-        measure: "HR",
-        trial_ids: [],
-      },
-      start,
-    };
+  it("starts empty — no autofill from any prior question", async () => {
+    reviewState = { start };
 
     render(
       <MemoryRouter>

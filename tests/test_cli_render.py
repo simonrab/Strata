@@ -13,7 +13,7 @@ from pathlib import Path
 import pytest
 
 from livemeta.cli import render
-from livemeta.core.demo import GLP1_CVOT_TRIALS, GLP1_MACE_QUESTION
+from tests.glp1_fixtures import GLP1_CVOT_TRIALS, GLP1_MACE_QUESTION
 from livemeta.core.pipeline import run_review_collect
 from livemeta.core.schema import (
     EffectMeasure,

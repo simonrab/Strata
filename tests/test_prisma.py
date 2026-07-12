@@ -10,7 +10,7 @@ screened + duplicates; screened = assessed + not_retrieved; assessed = included
 import json
 from pathlib import Path
 
-from livemeta.core import demo
+from tests import glp1_fixtures as demo
 from livemeta.core.prisma import build_prisma
 from livemeta.core.pipeline import run_review_collect
 from livemeta.core.schema import (

@@ -5,7 +5,7 @@ from pathlib import Path
 
 from pytest_bdd import given, when, then, scenario, parsers
 
-from livemeta.core import demo
+from tests import glp1_fixtures as demo
 from livemeta.core.pipeline import run_review_collect
 from livemeta.core.schema import EffectMeasure, PICO, PoolMethod, Question
 

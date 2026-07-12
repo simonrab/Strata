@@ -26,7 +26,8 @@ from fastapi import Depends, FastAPI, HTTPException, WebSocket, WebSocketDisconn
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-from ..core import demo, living, llm, pipeline, rob as rob_mod
+from ..core import living, llm, pipeline, rob as rob_mod
+from ..core import search as search_mod
 from ..core.ci import ask as ci_ask
 from ..core.ci import changefeed as ci_changefeed
 from ..core.ci import compare as ci_compare
@@ -113,19 +114,19 @@ def get_search_client():
     return ClinicalTrialsClient()
 
 
-def get_demo_search():
-    """Injectable discovery search for the demo run (overridden in tests offline).
+def get_discovery():
+    """Injectable live discovery for a run (overridden in tests offline).
 
-    Returns a `search_fn(pico) -> list[str]` the pipeline calls when the demo
-    question arrives with no trial_ids, so the live demo genuinely searches
-    ClinicalTrials.gov instead of being handed a curated list.
+    Returns a `search_fn(pico) -> list[str]` the pipeline calls when a question
+    arrives with no trial_ids, so the run genuinely searches ClinicalTrials.gov.
+    Not question-specific: the same seam serves every review.
     """
-    search_client = ClinicalTrialsClient()
+    client = ClinicalTrialsClient()
 
-    def search_fn(pico):
-        return demo.discover_demo_trials(pico, search_client=search_client)
+    def discover(pico):
+        return [c.nct_id for c in search_mod.search_trials(pico, client=client)]
 
-    return search_fn
+    return discover
 
 
 def get_ci_search():
@@ -224,13 +225,6 @@ def _summary(result: ReviewResult, versions: int, status: str) -> ReviewSummary:
     )
 
 
-@app.get("/api/demo", response_model=Question)
-def demo_question() -> Question:
-    # The discovery variant (no trial_ids): the Ask screen shows the PICO, and the
-    # trials are found by the real search when the run starts — not pre-baked.
-    return demo.GLP1_MACE_DISCOVER
-
-
 @app.post("/api/parse", response_model=Question)
 def parse_question(req: ParseRequest, parse=Depends(get_parse)) -> Question:
     return parse(req.text)
@@ -238,19 +232,14 @@ def parse_question(req: ParseRequest, parse=Depends(get_parse)) -> Question:
 
 @app.post("/api/reviews/run", response_model=ReviewResult)
 def run_review(
-    question: Question | None = None,
+    question: Question,
     fetch=Depends(get_fetch_study),
     store: SnapshotStore = Depends(get_store),
-    demo_search=Depends(get_demo_search),
+    discover=Depends(get_discovery),
 ) -> ReviewResult:
-    # No question means the demo: run its PICO through the live discovery search
-    # rather than a curated trial list. A supplied question already has candidates.
-    if question is None:
-        result = pipeline.run_review_collect(
-            demo.GLP1_MACE_DISCOVER, fetch, search_fn=demo_search
-        )
-    else:
-        result = pipeline.run_review_collect(question, fetch)
+    # The question is always parsed live (POST /api/parse) and supplied here. A
+    # question with no trial_ids is discovered live through the search seam.
+    result = pipeline.run_review_collect(question, fetch, search_fn=discover)
     store.save_snapshot(result)
     return result
 
@@ -660,16 +649,15 @@ async def ws_review(
     websocket: WebSocket,
     fetch=Depends(get_fetch_study),
     store: SnapshotStore = Depends(get_store),
-    demo_search=Depends(get_demo_search),
+    discover=Depends(get_discovery),
 ) -> None:
     await websocket.accept()
     try:
         payload = await websocket.receive_json()
-        question = _question_from_payload(payload)
-        # The demo question carries no trial_ids, so the pipeline runs the live
-        # discovery search; a user-supplied question already has its candidates.
-        search_fn = demo_search if not payload.get("question") else None
-        gen = pipeline.run_review(question, fetch, search_fn=search_fn)
+        question = Question.model_validate(payload["question"])
+        # A question with no trial_ids is discovered live through the search seam;
+        # one that already carries candidates skips straight to extraction.
+        gen = pipeline.run_review(question, fetch, search_fn=discover)
 
         final: ReviewResult | None = None
         while True:
@@ -685,13 +673,6 @@ async def ws_review(
         await websocket.close()
     except WebSocketDisconnect:
         return
-
-
-def _question_from_payload(payload: dict) -> Question:
-    """A WS client either kicks off the demo or supplies a parsed Question."""
-    if payload.get("question"):
-        return Question.model_validate(payload["question"])
-    return demo.GLP1_MACE_DISCOVER
 
 
 # --- Serve the built web UI (single-origin deploy) ---------------------------

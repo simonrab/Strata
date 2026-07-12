@@ -5,7 +5,8 @@ from pathlib import Path
 
 from pytest_bdd import given, when, then, scenario
 
-from livemeta.core import demo, rob as rob_mod
+from livemeta.core import rob as rob_mod
+from tests import glp1_fixtures as demo
 from livemeta.core.pipeline import run_review_collect
 from livemeta.core.schema import RobDecision
 from livemeta.core.store import SnapshotStore

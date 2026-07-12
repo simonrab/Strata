@@ -1,11 +1,18 @@
-"""The locked demo question: GLP-1 receptor agonists and cardiovascular events.
+"""Test fixtures: the GLP-1 / 3-point MACE cardiovascular outcome trials.
 
-A recent, well-established meta-analysis (Sattar et al., Lancet Diabetes
-Endocrinol 2021) pools these 8 cardiovascular outcome trials to a MACE hazard
-ratio of ~0.86 (0.80-0.93) — a result judges can sanity-check.
+These constants anchor the offline test suite — the recorded ClinicalTrials.gov
+JSON under ``tests/fixtures/`` is named by these NCT ids, and the canonical
+question lets the pipeline tests run deterministically without the network or the
+model. A well-established meta-analysis (Sattar et al., Lancet Diabetes
+Endocrinol 2021) pools these 8 trials to a MACE hazard ratio of ~0.86
+(0.80-0.93), so the tests assert against a known truth.
+
+This lives under ``tests/`` on purpose: it is test infrastructure, not shipped
+product code. The product parses and discovers every question live — nothing here
+is hardcoded into the app.
 """
 
-from .schema import PICO, EffectMeasure, Question
+from livemeta.core.schema import PICO, EffectMeasure, Question
 
 # 3-point MACE cardiovascular outcome trials of GLP-1 receptor agonists.
 GLP1_CVOT_TRIALS = [
@@ -40,20 +47,18 @@ GLP1_MACE_QUESTION = Question(
 # referenced by the living-update tests as the trial to inject.
 HELD_OUT_TRIAL = "NCT03496298"  # AMPLITUDE-O
 
-# The product-facing demo question: the *same* PICO but with no trial_ids, so a
-# live run discovers its trials through the real systematic search (Claude expands
-# the GLP-1 class into agents, queries CT.gov, screens) rather than replaying a
-# curated list. GLP1_CVOT_TRIALS remains only as the offline test-fixture set.
+# The same PICO but with no trial_ids, so a run discovers its trials through the
+# real systematic search rather than replaying the curated list above.
 GLP1_MACE_DISCOVER = GLP1_MACE_QUESTION.model_copy(update={"trial_ids": []})
 
 
 def discover_demo_trials(pico, *, search_client=None, llm_client=None) -> list[str]:
-    """NCT ids for the demo PICO from a genuine ClinicalTrials.gov search.
+    """NCT ids for the PICO from a genuine ClinicalTrials.gov search.
 
     Runs the systematic search (Claude expands the class into agents, each queried
-    on CT.gov). Whatever the search returns is what the demo pools — no curated
+    on CT.gov). Whatever the search returns is what gets pooled — no curated
     fallback list. If the search finds nothing the pipeline abstains honestly.
     """
-    from .search import search_trials
+    from livemeta.core.search import search_trials
 
     return [c.nct_id for c in search_trials(pico, client=search_client, llm_client=llm_client)]

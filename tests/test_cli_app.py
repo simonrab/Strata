@@ -13,7 +13,7 @@ from pathlib import Path
 import pytest
 
 from livemeta.cli.app import main
-from livemeta.core.demo import GLP1_CVOT_TRIALS, GLP1_MACE_QUESTION
+from tests.glp1_fixtures import GLP1_CVOT_TRIALS, GLP1_MACE_QUESTION
 from livemeta.core.pipeline import run_review_collect
 from livemeta.core.store import SnapshotStore
 
@@ -62,7 +62,7 @@ def test_help_exits_zero(capsys):
 
 
 def test_run_demo_reports_and_saves(store, capsys):
-    code = main(argv=["run", "--demo"], fetch_study=_fetch, store=store, search_client=_SearchClient())
+    code = main(argv=["run", "--question-text", GLP1_MACE_QUESTION.text], fetch_study=_fetch, store=store, search_client=_SearchClient(), parse=_parse)
     out = capsys.readouterr().out
     assert code == 0
     assert "0.86" in out
@@ -70,7 +70,7 @@ def test_run_demo_reports_and_saves(store, capsys):
 
 
 def test_run_demo_json_is_clean(store, capsys):
-    code = main(argv=["run", "--demo", "--json"], fetch_study=_fetch, store=store, search_client=_SearchClient())
+    code = main(argv=["run", "--question-text", GLP1_MACE_QUESTION.text, "--json"], fetch_study=_fetch, store=store, search_client=_SearchClient(), parse=_parse)
     captured = capsys.readouterr()
     assert code == 0
     doc = json.loads(captured.out)  # stdout is a single JSON document
@@ -78,7 +78,7 @@ def test_run_demo_json_is_clean(store, capsys):
 
 
 def test_run_demo_no_save_persists_nothing(store):
-    main(argv=["run", "--demo", "--no-save"], fetch_study=_fetch, store=store, search_client=_SearchClient())
+    main(argv=["run", "--question-text", GLP1_MACE_QUESTION.text, "--no-save"], fetch_study=_fetch, store=store, search_client=_SearchClient(), parse=_parse)
     assert store.list_versions("glp1-mace") == []
 
 
@@ -104,7 +104,7 @@ def test_report_unknown_id_is_exit_5(store, capsys):
 
 
 def test_report_after_run(store, capsys):
-    main(argv=["run", "--demo"], fetch_study=_fetch, store=store, search_client=_SearchClient())
+    main(argv=["run", "--question-text", GLP1_MACE_QUESTION.text], fetch_study=_fetch, store=store, search_client=_SearchClient(), parse=_parse)
     capsys.readouterr()
     code = main(argv=["report", "glp1-mace"], store=store)
     assert code == 0
@@ -171,7 +171,7 @@ def test_check_updates_returns_only_new(store, capsys):
 
 
 def test_decision_flag_drops_a_trial_and_bumps_version(store, capsys):
-    main(argv=["run", "--demo"], fetch_study=_fetch, store=store, search_client=_SearchClient())
+    main(argv=["run", "--question-text", GLP1_MACE_QUESTION.text], fetch_study=_fetch, store=store, search_client=_SearchClient(), parse=_parse)
     capsys.readouterr()
     code = main(
         argv=["decision", "glp1-mace", GLP1_CVOT_TRIALS[0], "flagged", "--reason", "unclear arm", "--json"],
@@ -185,7 +185,7 @@ def test_decision_flag_drops_a_trial_and_bumps_version(store, capsys):
 
 
 def test_rob_decision_records_signoff(store, capsys):
-    main(argv=["run", "--demo"], fetch_study=_fetch, store=store, search_client=_SearchClient())
+    main(argv=["run", "--question-text", GLP1_MACE_QUESTION.text], fetch_study=_fetch, store=store, search_client=_SearchClient(), parse=_parse)
     capsys.readouterr()
     code = main(
         argv=["rob-decision", "glp1-mace", GLP1_CVOT_TRIALS[0], "D1", "--reason", "ok"],
@@ -197,7 +197,7 @@ def test_rob_decision_records_signoff(store, capsys):
 
 
 def test_screening_decision_reruns_and_saves(store, capsys):
-    main(argv=["run", "--demo"], fetch_study=_fetch, store=store, search_client=_SearchClient())
+    main(argv=["run", "--question-text", GLP1_MACE_QUESTION.text], fetch_study=_fetch, store=store, search_client=_SearchClient(), parse=_parse)
     capsys.readouterr()
     code = main(
         argv=["screening-decision", "glp1-mace", GLP1_CVOT_TRIALS[0], "included", "--reason", "keep"],
@@ -209,3 +209,7 @@ def test_screening_decision_reruns_and_saves(store, capsys):
     assert store.list_versions("glp1-mace") == [1, 2]
 
 
+def _parse(_text):
+    # Stand in for the live PICO parser: the demo PICO with no trials, so the run
+    # discovers through the injected search client (offline, deterministic).
+    return GLP1_MACE_QUESTION.model_copy(update={"trial_ids": []})

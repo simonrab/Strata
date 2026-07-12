@@ -12,7 +12,7 @@ from pathlib import Path
 from pytest_bdd import given, when, then, scenario
 
 from livemeta.cli.app import main
-from livemeta.core.demo import GLP1_CVOT_TRIALS, GLP1_MACE_QUESTION
+from tests.glp1_fixtures import GLP1_CVOT_TRIALS, GLP1_MACE_QUESTION
 from livemeta.core.pipeline import run_review_collect
 from livemeta.core.store import SnapshotStore
 
@@ -66,13 +66,13 @@ def _seed7(tmp_path):
 @given("a saved command-line review of the eight GLP-1 MACE trials", target_fixture="context")
 def _seed8(tmp_path):
     store = SnapshotStore(tmp_path)
-    main(argv=["run", "--demo"], fetch_study=_fetch, store=store, search_client=_SearchClient())
+    main(argv=["run", "--question-text", GLP1_MACE_QUESTION.text], fetch_study=_fetch, store=store, search_client=_SearchClient(), parse=_parse)
     return {"store": store, "out": ""}
 
 
 @when("I run the demo review from the command line")
 def _run_demo(context, capsys):
-    main(argv=["run", "--demo"], fetch_study=_fetch, store=context["store"], search_client=_SearchClient())
+    main(argv=["run", "--question-text", GLP1_MACE_QUESTION.text], fetch_study=_fetch, store=context["store"], search_client=_SearchClient(), parse=_parse)
     context["out"] = capsys.readouterr().out
 
 
@@ -137,3 +137,9 @@ def _audit(context):
 @then("the report marks risk of bias as PENDING rather than fabricating it")
 def _pending(context):
     assert "PENDING" in context["out"]
+
+
+def _parse(_text):
+    # Stand in for the live PICO parser: the demo PICO with no trials, so the run
+    # discovers through the injected search client (offline, deterministic).
+    return GLP1_MACE_QUESTION.model_copy(update={"trial_ids": []})

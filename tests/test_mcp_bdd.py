@@ -5,7 +5,7 @@ from pathlib import Path
 
 from pytest_bdd import given, when, then, scenario
 
-from livemeta.core.demo import GLP1_CVOT_TRIALS, GLP1_MACE_QUESTION
+from tests.glp1_fixtures import GLP1_CVOT_TRIALS, GLP1_MACE_QUESTION
 from livemeta.core.pipeline import run_review_collect
 from livemeta.core.schema import ReviewDiff
 from livemeta.core.store import SnapshotStore

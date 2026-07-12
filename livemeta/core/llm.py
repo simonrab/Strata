@@ -1,10 +1,11 @@
 """Dynamic PICO parsing: turn a free-text clinical question into a Question.
 
 Division of labour (see CLAUDE.md): Claude *reads and structures* the question
-into PICO — it never computes anything. A deterministic, keyless fallback keeps
-the locked demo runnable with no ANTHROPIC_API_KEY, and any model/parse failure
-degrades to that fallback rather than raising, so the pipeline never dies on a
-bad parse.
+into PICO — it never computes anything. Every question, including the GLP-1 MACE
+demo, goes through the same live parse: nothing is hardcoded or short-circuited.
+Any model/parse failure degrades to a best-effort fallback rather than raising,
+so the pipeline never dies on a bad parse — but note the demo's PICO then depends
+on the model being reachable, since there is no curated substitute.
 """
 
 from __future__ import annotations
@@ -13,7 +14,7 @@ import os
 
 from pydantic import BaseModel
 
-from . import demo, search as search_mod
+from . import search as search_mod
 from .schema import PICO, EffectMeasure, Question
 
 # Haiku 4.5 is the default: every Claude call here is a read-and-structure task
@@ -37,15 +38,6 @@ class ParsedPICO(BaseModel):
     comparator: str
     outcome: str
     measure: str = "HR"
-
-
-def _matches_demo(text: str) -> bool:
-    """The locked GLP-1 MACE demo question — recognized so the memorable demo is
-    deterministic and never needs a key or the model."""
-    low = text.lower()
-    return ("glp-1" in low or "glp1" in low) and (
-        "mace" in low or "cardiovascular" in low
-    )
 
 
 def _measure(value: str) -> EffectMeasure:
@@ -99,17 +91,12 @@ def parse_question(
 ) -> Question:
     """Parse a free-text clinical question into a Question (PICO + candidate trials).
 
-    The locked demo short-circuits to the recorded question so the live demo is
-    deterministic and keyless. Otherwise Claude structures the PICO (when a client
-    or ANTHROPIC_API_KEY is available), then a multi-source search
-    (ClinicalTrials.gov + Europe PMC, when an `epmc_client` is supplied) fills in
-    the candidate ids. Any failure degrades to a best-effort parse.
+    Claude structures the PICO (when a client or ANTHROPIC_API_KEY is available),
+    then a multi-source search (ClinicalTrials.gov + Europe PMC, when an
+    `epmc_client` is supplied) fills in the candidate ids. Any failure degrades to
+    a best-effort parse. The GLP-1 MACE demo question is treated exactly like any
+    other — there is no special-case short-circuit.
     """
-    if _matches_demo(text):
-        # The curated demo PICO, but with no trial list — running it discovers the
-        # trials through the real search like any other question (no hardcoding).
-        return demo.GLP1_MACE_DISCOVER.model_copy(update={"text": text})
-
     client = llm_client
     if client is None and os.environ.get("ANTHROPIC_API_KEY"):
         try:  # pragma: no cover - exercised only with a real key

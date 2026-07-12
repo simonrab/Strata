@@ -139,22 +139,19 @@ def _emit_review(result, args, *, plot_pool=True) -> int:
 
 
 def _cmd_run(args, *, store, fetch_study, parse, search_client) -> int:
-    from ..core import demo, pipeline
+    from ..core import pipeline
     from ..core import search as search_mod
     from ..core.schema import ReviewResult
 
-    search_fn = None
-    if args.demo:
-        # The demo discovers its trials live rather than replaying a curated list.
-        question = demo.GLP1_MACE_DISCOVER
-        search_fn = lambda pico: [
-            c.nct_id for c in search_mod.search_trials(pico, client=search_client)
-        ]
-    elif args.question_text:
-        question = parse(args.question_text)
-    else:
-        _err("run needs --demo or --question-text TEXT.")
+    if not args.question_text:
+        _err("run needs --question-text TEXT.")
         return EXIT_INTERNAL
+    question = parse(args.question_text)
+    # A question with no trial_ids is discovered live through the injected search
+    # client; one that already carries candidates skips straight to extraction.
+    search_fn = lambda pico: [
+        c.nct_id for c in search_mod.search_trials(pico, client=search_client)
+    ]
 
     final: ReviewResult | None = None
     for event in pipeline.run_review(question, fetch_study, search_fn=search_fn):
@@ -400,7 +397,6 @@ def build_parser() -> argparse.ArgumentParser:
     sub = parser.add_subparsers(dest="command", required=True)
 
     p_run = sub.add_parser("run", parents=[parent], help="Run a review end to end.")
-    p_run.add_argument("--demo", action="store_true", help="Run the locked GLP-1/MACE demo.")
     p_run.add_argument("--question-text", help="Free-text clinical question to parse and run.")
     p_run.add_argument("--plot", help="Also write a matplotlib forest-plot PNG to this path.")
     p_run.add_argument("--no-save", action="store_true", help="Do not persist a snapshot.")

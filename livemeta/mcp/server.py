@@ -19,7 +19,6 @@ from __future__ import annotations
 
 from mcp.server.fastmcp import FastMCP
 
-from ..core import demo
 from ..core import extract as extract_mod
 from ..core.ci import ask as ci_ask
 from ..core.ci import changefeed as ci_changefeed
@@ -141,16 +140,6 @@ def get_store() -> SnapshotStore:
     return _store
 
 
-def _resolve_question(question_id: str) -> Question:
-    """Find the question to run: the demo (discovered live), or a saved snapshot."""
-    if question_id == demo.GLP1_MACE_DISCOVER.id:
-        return demo.GLP1_MACE_DISCOVER
-    latest = get_store().load_latest(question_id)
-    if latest is not None:
-        return latest.question
-    raise ValueError(f"Unknown question_id: {question_id!r}")
-
-
 def _discover(pico) -> list[str]:
     """Discover candidate NCT ids for a PICO via the injected CT.gov client."""
     return [c.nct_id for c in search_mod.search_trials(pico, client=get_client())]
@@ -239,8 +228,9 @@ def parse_question(text: str) -> Question:
     """Structure a free-text clinical question into PICO + candidate trials.
 
     Claude reads and structures the question; ClinicalTrials.gov search fills in
-    the candidate trial ids. The locked demo question resolves deterministically
-    without a key, so the memorable demo always works.
+    the candidate trial ids. Every question is parsed live through the same path —
+    the GLP-1 MACE demo is not special-cased — so the PICO depends on the model
+    being reachable rather than a curated substitute.
     """
     return llm_mod.parse_question(text, search_client=get_client())
 
@@ -327,13 +317,15 @@ def grade_outcome(question_id: str) -> GradeAssessment:
 
 
 @mcp.tool()
-def run_review(question_id: str = "glp1-mace") -> ReviewResult:
-    """Run the whole pipeline for a known question and snapshot the result.
+def run_review(question_text: str) -> ReviewResult:
+    """Parse a free-text clinical question, run the whole pipeline, snapshot it.
 
-    This is the one-shot path (retrieve -> extract -> validate -> pool) and it
-    persists the result so `update` has a baseline to diff against.
+    Claude structures the free text into PICO, the search discovers candidate
+    trials, and the deterministic core runs retrieve -> extract -> validate ->
+    pool. The result is persisted so `update` has a baseline to diff against.
+    Nothing is hardcoded — every question is parsed and discovered live.
     """
-    question = _resolve_question(question_id)
+    question = llm_mod.parse_question(question_text, search_client=get_client())
     result = run_review_collect(
         question, get_client().fetch_study, search_fn=_discover
     )

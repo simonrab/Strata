@@ -10,7 +10,7 @@ from pathlib import Path
 
 import pytest
 
-from livemeta.core.demo import GLP1_CVOT_TRIALS, GLP1_MACE_QUESTION
+from tests.glp1_fixtures import GLP1_CVOT_TRIALS, GLP1_MACE_QUESTION
 from livemeta.core.pipeline import run_review_collect
 from livemeta.core.schema import ReviewDiff, ReviewResult, TrialCandidate, TrialExtraction
 from livemeta.core.store import SnapshotStore
@@ -35,7 +35,10 @@ class FixtureClient:
 
 
 @pytest.fixture(autouse=True)
-def wired(tmp_path):
+def wired(tmp_path, monkeypatch):
+    # No key: parse_question degrades to its offline best-effort path, so run_review
+    # stays hermetic (the model is never hit) while discovery uses the injected client.
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
     server.set_client(FixtureClient())
     server.set_store(SnapshotStore(tmp_path))
     yield
@@ -70,30 +73,35 @@ def test_validate_and_pool_reproduce_slice1_answer():
 
 
 def test_run_review_saves_snapshot_and_returns_result():
-    result = server.run_review("glp1-mace")
+    result = server.run_review(GLP1_MACE_QUESTION.text)
     assert isinstance(result, ReviewResult)
     assert result.pool is not None
     assert round(result.pool.estimate, 2) == 0.86
     # snapshot persisted so `update` has a baseline
-    assert server.get_store().list_versions("glp1-mace") == [1]
+    assert server.get_store().list_versions(result.question.id) == [1]
 
 
-def test_parse_question_recognizes_the_locked_demo():
+def test_parse_question_is_not_hardcoded_to_the_demo(monkeypatch):
+    # The GLP-1 MACE demo text is structured through the same path as any question
+    # — there is no short-circuit to a curated id. Offline (no key) it degrades to
+    # a best-effort PICO and discovers candidates via the injected CT.gov client.
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
     q = server.parse_question(GLP1_MACE_QUESTION.text)
-    assert q.id == "glp1-mace"
-    # The demo question carries no curated trial list — it discovers on run.
-    assert q.trial_ids == []
+    assert q.id != "glp1-mace"  # no hardcoded demo id
+    assert q.pico.outcome  # structured into a PICO
+    assert q.trial_ids  # discovered via the injected search, not a curated list
 
 
 def test_record_decision_flags_trial_and_repools():
-    server.run_review("glp1-mace")
+    review = server.run_review(GLP1_MACE_QUESTION.text)
+    qid = review.question.id
     target = GLP1_CVOT_TRIALS[0]
 
-    result = server.record_decision("glp1-mace", target, "flagged", "unclear arm")
+    result = server.record_decision(qid, target, "flagged", "unclear arm")
 
     assert result.pool.k == 7
     assert target not in {s.study_id for s in result.pool.studies}
-    assert server.get_store().list_versions("glp1-mace") == [1, 2]
+    assert server.get_store().list_versions(qid) == [1, 2]
 
 
 def test_update_adds_trial_and_reports_diff():

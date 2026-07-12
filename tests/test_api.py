@@ -17,7 +17,7 @@ from livemeta.api.app import (
     get_search_client,
     get_store,
 )
-from livemeta.core import demo
+from tests import glp1_fixtures as demo
 from livemeta.core.schema import (
     PICO,
     CIMethod,
@@ -85,26 +85,20 @@ def store(tmp_path):
     app.dependency_overrides.pop(get_store, None)
 
 
-def test_demo_question_endpoint():
-    r = client.get("/api/demo")
-    assert r.status_code == 200
-    assert r.json()["id"] == "glp1-mace"
-    # Discovery variant: no pre-baked trial list — the run searches for them.
-    assert r.json()["trial_ids"] == []
-
-
 def test_run_endpoint_returns_pooled_result():
-    from livemeta.api.app import get_demo_search
+    from livemeta.api.app import get_discovery
 
-    # The demo run discovers its trials via search; drive discovery offline with
+    # A question with no trial_ids is discovered live; drive discovery offline with
     # the fixture set so the run is deterministic and network-free.
-    app.dependency_overrides[get_demo_search] = lambda: (
+    app.dependency_overrides[get_discovery] = lambda: (
         lambda _pico: list(demo.GLP1_CVOT_TRIALS)
     )
     try:
-        r = client.post("/api/reviews/run", json=None)
+        r = client.post(
+            "/api/reviews/run", json=demo.GLP1_MACE_DISCOVER.model_dump(mode="json")
+        )
     finally:
-        app.dependency_overrides.pop(get_demo_search, None)
+        app.dependency_overrides.pop(get_discovery, None)
     assert r.status_code == 200
     body = r.json()
     assert round(body["pool"]["estimate"], 2) == 0.86
@@ -113,16 +107,16 @@ def test_run_endpoint_returns_pooled_result():
 
 
 def test_ws_streams_pipeline_events(store):
-    from livemeta.api.app import get_demo_search
+    from livemeta.api.app import get_discovery
 
-    # The demo run discovers its trials via search; drive discovery offline with
+    # A question with no trial_ids is discovered live; drive discovery offline with
     # the fixture set so the stream stays deterministic.
-    app.dependency_overrides[get_demo_search] = lambda: (
+    app.dependency_overrides[get_discovery] = lambda: (
         lambda _pico: list(demo.GLP1_CVOT_TRIALS)
     )
     try:
         with client.websocket_connect("/ws/review") as ws:
-            ws.send_json({"mode": "demo"})
+            ws.send_json({"question": demo.GLP1_MACE_DISCOVER.model_dump(mode="json")})
             stages = []
             while True:
                 ev = ws.receive_json()
@@ -131,7 +125,7 @@ def test_ws_streams_pipeline_events(store):
                     assert "reduced" in ev["message"].lower()
                     break
     finally:
-        app.dependency_overrides.pop(get_demo_search, None)
+        app.dependency_overrides.pop(get_discovery, None)
     assert stages[0] == "parse"
     assert "search" in stages  # a real discovery stage ran
     assert "pool" in stages

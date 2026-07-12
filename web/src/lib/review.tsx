@@ -15,9 +15,8 @@ interface ReviewState {
   status: Status;
   events: PipelineEvent[];
   result: ReviewResult | null;
-  question: Question | null;
   runningId: string | null;
-  start: (question?: Question) => void;
+  start: (question: Question) => void;
   reset: () => void;
 }
 
@@ -39,10 +38,8 @@ export function ReviewProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<Status>("idle");
   const [events, setEvents] = useState<PipelineEvent[]>([]);
   const [result, setResult] = useState<ReviewResult | null>(null);
-  const [question, setQuestion] = useState<Question | null>(null);
   const [runningId, setRunningId] = useState<string | null>(null);
   const socketRef = useRef<WebSocket | null>(null);
-  const questionLoaded = useRef(false);
 
   const reset = useCallback(() => {
     socketRef.current?.close();
@@ -51,17 +48,16 @@ export function ReviewProvider({ children }: { children: ReactNode }) {
     setResult(null);
   }, []);
 
-  const start = useCallback((q?: Question) => {
+  const start = useCallback((q: Question) => {
     setEvents([]);
     setResult(null);
     setStatus("running");
-    setRunningId(q?.id ?? "glp1-mace");
+    setRunningId(q.id);
 
     const socket = new WebSocket(wsUrl("/ws/review"));
     socketRef.current = socket;
 
-    socket.onopen = () =>
-      socket.send(JSON.stringify(q ? { question: q } : { mode: "demo" }));
+    socket.onopen = () => socket.send(JSON.stringify({ question: q }));
     socket.onmessage = (msg) => {
       const event: PipelineEvent = JSON.parse(msg.data);
       setEvents((prev) => [...prev, event]);
@@ -75,20 +71,10 @@ export function ReviewProvider({ children }: { children: ReactNode }) {
     socket.onerror = () => setStatus("error");
   }, []);
 
-  // Fetch the demo question once so the Ask screen can show it.
   const value = useMemo<ReviewState>(
-    () => ({ status, events, result, question, runningId, start, reset }),
-    [status, events, result, question, runningId, start, reset]
+    () => ({ status, events, result, runningId, start, reset }),
+    [status, events, result, runningId, start, reset]
   );
-
-  // Lazy-load the demo question exactly once.
-  if (!questionLoaded.current) {
-    questionLoaded.current = true;
-    fetch("/api/demo")
-      .then((r) => r.json())
-      .then((q: Question) => setQuestion(q))
-      .catch(() => undefined);
-  }
 
   return <ReviewContext.Provider value={value}>{children}</ReviewContext.Provider>;
 }
