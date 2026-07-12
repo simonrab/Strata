@@ -188,10 +188,20 @@ def _appraise(
 
 
 def _default_search(pico, llm_client=None) -> list[str]:
-    """Discover candidate NCT ids for a PICO via the real systematic search."""
-    from . import search as search_mod
+    """Discover candidate NCT ids for a PICO via the real search.
 
-    return [c.nct_id for c in search_mod.search_trials(pico, llm_client=llm_client)]
+    Scoped to ClinicalTrials.gov (an injected client suppresses the Europe PMC
+    leg): only CT.gov's structured arm-level results can be pooled, so pulling in
+    hundreds of published-paper records would only be fetched and screened to be
+    dropped at extraction — slow, and it never adds a poolable trial.
+    """
+    from . import search as search_mod
+    from .sources.clinicaltrials import ClinicalTrialsClient
+
+    candidates = search_mod.search_trials(
+        pico, client=ClinicalTrialsClient(), llm_client=llm_client
+    )
+    return [c.nct_id for c in candidates]
 
 
 def run_review(
