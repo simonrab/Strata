@@ -22,8 +22,9 @@ if "pytest" not in sys.modules:
         pass
 
 import anyio
-from fastapi import Depends, FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import Depends, FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from ..core import living, llm, pipeline, rob as rob_mod
@@ -46,7 +47,9 @@ from ..core.ci.schema import (
     MarketAnswer,
     MilestoneRadar,
     MoaLandscape,
+    Source,
     SourceSelection,
+    explicitly_selected,
 )
 from ..core.diff import diff_reviews, status_from_diff
 from ..core.schema import (
@@ -62,6 +65,8 @@ from ..core.schema import (
     TrialCandidate,
 )
 from ..core.sources.clinicaltrials import ClinicalTrialsClient
+from ..core.sources.europepmc import EuropePmcClient
+from ..core.sources.openfda import OpenFdaClient
 from ..core.sources.router import SourceRouter
 from ..core.store import SnapshotStore, make_store
 
@@ -73,6 +78,16 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.exception_handler(llm.LlmCreditsError)
+async def _llm_credits_handler(request: Request, exc: llm.LlmCreditsError) -> JSONResponse:
+    # An out-of-credits refusal from Anthropic is the account's state, not a bad
+    # request: 402 with a machine-readable code so the UI can show the real cause.
+    return JSONResponse(
+        status_code=402,
+        content={"detail": {"code": "llm_credits_exhausted", "message": str(exc)}},
+    )
 
 
 def get_fetch_study():
@@ -110,17 +125,27 @@ def get_search_client():
     return ClinicalTrialsClient()
 
 
-def get_discovery():
+def get_discovery(sources: str | None = None):
     """Injectable live discovery for a run (overridden in tests offline).
 
     Returns a `search_fn(pico) -> list[str]` the pipeline calls when a question
     arrives with no trial_ids, so the run genuinely searches ClinicalTrials.gov.
     Not question-specific: the same seam serves every review.
+
+    ClinicalTrials.gov always leads. PubMed (Europe PMC) is opt-in: a caller that
+    names `pubmed` in the `sources` query param widens discovery to the published
+    literature too. Those records still flag at extraction rather than pool — only
+    CT.gov's structured results reach the estimate — so this only surfaces trials
+    for review, it never changes the pooled number silently.
     """
     client = ClinicalTrialsClient()
+    epmc = EuropePmcClient() if explicitly_selected(sources, Source.PUBMED) else None
 
     def discover(pico):
-        return [c.nct_id for c in search_mod.search_trials(pico, client=client)]
+        return [
+            c.nct_id
+            for c in search_mod.search_trials(pico, client=client, epmc_client=epmc)
+        ]
 
     return discover
 
@@ -148,15 +173,17 @@ def get_ci_company_search():
     return ClinicalTrialsClient().search_by_sponsor
 
 
-def get_openfda():
+def get_openfda(sources: str | None = None):
     """Injectable openFDA approvals client (overridden in tests).
 
-    Disabled for now: the live openFDA lookups were surfacing inaccurate
-    approvals, so we return None to suppress all regulatory-approval fetching.
-    Restore ``OpenFdaClient()`` here to re-enable. The service layer treats a
-    None client as "no approvals" without erroring.
+    Opt-in: US FDA approvals are off unless a caller names `openfda` in the
+    `sources` query param, at which point a live `OpenFdaClient` is provisioned.
+    Without it we return None and the service layer treats that as "no approvals"
+    without erroring, so the market/company lenses stay CT.gov-only by default.
+    (The live lookups were once surfacing inaccurate approvals, which is why they
+    are gated behind an explicit request rather than on by default.)
     """
-    return None
+    return OpenFdaClient() if explicitly_selected(sources, Source.OPENFDA) else None
 
 
 class ParseRequest(BaseModel):

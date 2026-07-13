@@ -38,7 +38,9 @@ from ..core.ci.schema import (
     MarketAnswer,
     MilestoneRadar,
     MoaLandscape,
+    Source,
     SourceSelection,
+    explicitly_selected,
 )
 from ..core.sources.openfda import OpenFdaClient
 from ..core import grade as grade_mod
@@ -122,10 +124,22 @@ def get_openfda() -> OpenFdaClient | None:
     Disabled for now: the live openFDA lookups were surfacing inaccurate
     approvals, so we default to None to suppress all regulatory-approval
     fetching. A client set via ``set_openfda`` (e.g. in tests) still takes
-    precedence; restore ``OpenFdaClient()`` below to re-enable by default. The
-    service layer treats a None client as "no approvals" without erroring.
+    precedence. Per-tool opt-in goes through ``_openfda_for``; this bare accessor
+    stays None-by-default so a tool that never opts in fetches no approvals.
     """
     return _openfda
+
+
+def _openfda_for(sources: str | None) -> OpenFdaClient | None:
+    """The openFDA client for one tool call: opt-in, off by default.
+
+    A test-injected client (``set_openfda``) always wins. Otherwise a live
+    ``OpenFdaClient`` is provisioned only when the caller names ``openfda`` in the
+    ``sources`` argument, so US FDA approvals stay off unless explicitly asked for.
+    """
+    if _openfda is not None:
+        return _openfda
+    return OpenFdaClient() if explicitly_selected(sources, Source.OPENFDA) else None
 
 
 def set_store(store: SnapshotStore) -> None:
@@ -155,15 +169,24 @@ def search_trials(
     comparator: str,
     outcome: str,
     max_results: int = 20,
+    sources: str | None = None,
 ) -> list[TrialCandidate]:
-    """Find candidate trials for a PICO question via ClinicalTrials.gov v2."""
+    """Find candidate trials for a PICO question via ClinicalTrials.gov v2.
+
+    ClinicalTrials.gov is always searched. Naming `pubmed` in `sources` (comma
+    list) also searches the published literature via Europe PMC — opt-in, since
+    those records flag at extraction rather than pool.
+    """
     pico = PICO(
         population=population,
         intervention=intervention,
         comparator=comparator,
         outcome=outcome,
     )
-    return search_mod.search_trials(pico, max_results=max_results, client=get_client())
+    epmc = get_epmc_client() if explicitly_selected(sources, Source.PUBMED) else None
+    return search_mod.search_trials(
+        pico, max_results=max_results, client=get_client(), epmc_client=epmc
+    )
 
 
 @mcp.tool()
@@ -317,17 +340,34 @@ def grade_outcome(question_id: str) -> GradeAssessment:
 
 
 @mcp.tool()
-def run_review(question_text: str) -> ReviewResult:
+def run_review(question_text: str, sources: str | None = None) -> ReviewResult:
     """Parse a free-text clinical question, run the whole pipeline, snapshot it.
 
     Claude structures the free text into PICO, the search discovers candidate
     trials, and the deterministic core runs retrieve -> extract -> validate ->
     pool. The result is persisted so `update` has a baseline to diff against.
     Nothing is hardcoded — every question is parsed and discovered live.
+
+    Discovery is ClinicalTrials.gov by default; naming `pubmed` in `sources`
+    widens it to Europe PMC too. Only CT.gov's structured results are pooled, so a
+    published-only record surfaces for review rather than changing the estimate.
     """
     question = llm_mod.parse_question(question_text, search_client=get_client())
+    epmc = get_epmc_client() if explicitly_selected(sources, Source.PUBMED) else None
+    discover = (
+        _discover
+        if epmc is None
+        else (
+            lambda pico: [
+                c.nct_id
+                for c in search_mod.search_trials(
+                    pico, client=get_client(), epmc_client=epmc
+                )
+            ]
+        )
+    )
     result = run_review_collect(
-        question, get_client().fetch_study, search_fn=_discover
+        question, get_client().fetch_study, search_fn=discover
     )
     get_store().save_snapshot(result)
     return result
@@ -384,7 +424,9 @@ def track_asset(condition: str, name: str) -> list[DevelopmentEvent]:
 
 
 @mcp.tool()
-def company_pipeline(name: str, as_of: str | None = None) -> CompanyPipeline:
+def company_pipeline(
+    name: str, as_of: str | None = None, sources: str | None = None
+) -> CompanyPipeline:
     """Map a pharma company's entire pipeline across every indication and phase.
 
     The cross-condition companion to `map_landscape`: pulls every trial the
@@ -392,13 +434,16 @@ def company_pipeline(name: str, as_of: str | None = None) -> CompanyPipeline:
     several indications, reconciled over time (`as_of` reconstructs a past
     pipeline), and joined to the company's openFDA approvals. Readouts and
     evidence badges come through on the cells exactly as on the condition board.
+
+    openFDA approvals are opt-in: name `openfda` in `sources` (comma list) to
+    include them; by default the pipeline is ClinicalTrials.gov only.
     """
     return ci_service.company_pipeline(
         get_store(),
         name,
         as_of=as_of,
         search=get_client().search_by_sponsor,
-        openfda=get_openfda(),
+        openfda=_openfda_for(sources),
     )
 
 
@@ -421,12 +466,13 @@ def asset_dossier(name: str, sources: str | None = None) -> AssetDossier:
     """Deep competitive dossier for one drug: every trial (phase, status,
     enrolment, countries, readouts), pipeline events, sub-indications, openFDA
     approvals, and the living pooled evidence. `sources` (comma list) selects the
-    data sources; default is the structured trio (ctgov, pubmed, openfda)."""
+    data sources; ClinicalTrials.gov is always on, while PubMed and openFDA are
+    opt-in — name them to include Europe PMC records / US FDA approvals."""
     return ci_service.asset_dossier(
         get_store(),
         name,
         search=get_client().search_by_intervention,
-        openfda=get_openfda(),
+        openfda=_openfda_for(sources),
         selection=SourceSelection.from_param(sources),
     )
 
@@ -488,36 +534,42 @@ def moa_landscape(condition: str) -> MoaLandscape:
 
 
 @mcp.tool()
-def compare_assets(assets: str, indication: str | None = None) -> AssetComparison:
+def compare_assets(
+    assets: str, indication: str | None = None, sources: str | None = None
+) -> AssetComparison:
     """Side-by-side profile of two or more assets (comma-separated names).
 
     Compares OPERATIONAL facts (phase, pivotal trial, enrollment, geography, next
     readout). It deliberately does NOT rank the pooled efficacy: two estimates from
     separate meta-analyses are an unanchored indirect comparison, so each asset's
     evidence is shown in its own context and a comparability check flags them as
-    not directly comparable. Abstaining from the verdict is the trust story."""
+    not directly comparable. Abstaining from the verdict is the trust story.
+
+    openFDA approvals are opt-in: name `openfda` in `sources` to include them."""
     names = [a.strip() for a in assets.split(",") if a.strip()]
     return ci_compare.compare_assets(
         get_store(), names, indication,
-        search=get_client().search_by_intervention, openfda=get_openfda(),
+        search=get_client().search_by_intervention, openfda=_openfda_for(sources),
     )
 
 
 @mcp.tool()
-def market_ask(text: str) -> MarketAnswer:
+def market_ask(text: str, sources: str | None = None) -> MarketAnswer:
     """Answer a plain-language market-intelligence question by routing it to the
     right tool and returning that tool's typed payload plus a grounded narrative.
 
     Claude picks the tool (landscape, changes, compare, radar, moa, dossier,
     company, indication) and extracts params; deterministic code produces every
-    figure. The unifying front door over the whole market-intelligence surface."""
+    figure. The unifying front door over the whole market-intelligence surface.
+
+    openFDA approvals are opt-in: name `openfda` in `sources` to include them."""
     client = get_client()
     deps = MarketDeps(
         search_condition=client.search_pipeline,
         search_asset=client.search_by_intervention,
         search_sponsor=client.search_by_sponsor,
         search_indication=client.search_by_condition,
-        openfda=get_openfda(),
+        openfda=_openfda_for(sources),
         llm_client=None,  # ask/moa resolve the LLM from ANTHROPIC_API_KEY, else deterministic
     )
     return ci_ask.answer(get_store(), text, deps=deps)

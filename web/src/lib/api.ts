@@ -30,9 +30,37 @@ function apiUrl(path: string): string {
   return `${API_BASE}${path}`;
 }
 
+// A non-2xx backend response, carrying the status and the machine-readable
+// error code the API puts in `detail` (e.g. "llm_credits_exhausted" when the
+// Anthropic account is out of credits) so pages can render a specific state.
+export class ApiError extends Error {
+  status: number;
+  code?: string;
+
+  constructor(status: number, message: string, code?: string) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+    this.code = code;
+  }
+}
+
 async function json<T>(res: Response): Promise<T> {
   if (!res.ok) {
-    throw new Error(`${res.status} ${res.statusText}`);
+    let message = `${res.status} ${res.statusText}`;
+    let code: string | undefined;
+    try {
+      const detail = (await res.json())?.detail;
+      if (typeof detail === "string") {
+        message = detail;
+      } else if (detail && typeof detail === "object") {
+        if (typeof detail.message === "string") message = detail.message;
+        if (typeof detail.code === "string") code = detail.code;
+      }
+    } catch {
+      // Non-JSON error body; keep the status-line message.
+    }
+    throw new ApiError(res.status, message, code);
   }
   return (await res.json()) as T;
 }
@@ -160,10 +188,12 @@ export async function getLandscape(
 
 export async function getCompanyPipeline(
   name: string,
-  asOf?: string | null
+  asOf?: string | null,
+  sources?: Source[]
 ): Promise<CompanyPipeline> {
   const params = new URLSearchParams();
   if (asOf) params.set("as_of", asOf);
+  if (sources && sources.length) params.set("sources", sources.join(","));
   const qs = params.toString();
   return json<CompanyPipeline>(
     await fetch(apiUrl(`/api/company/${encodeURIComponent(name)}${qs ? `?${qs}` : ""}`))
@@ -265,16 +295,19 @@ export async function getMoaLandscape(condition: string): Promise<MoaLandscape> 
 
 export async function compareAssets(
   assets: string[],
-  indication?: string | null
+  indication?: string | null,
+  sources?: Source[]
 ): Promise<AssetComparison> {
   const params = new URLSearchParams({ assets: assets.join(",") });
   if (indication) params.set("indication", indication);
+  if (sources && sources.length) params.set("sources", sources.join(","));
   return json<AssetComparison>(await fetch(apiUrl(`/api/compare?${params.toString()}`)));
 }
 
-export async function marketAsk(text: string): Promise<MarketAnswer> {
+export async function marketAsk(text: string, sources?: Source[]): Promise<MarketAnswer> {
+  const qs = sources && sources.length ? `?sources=${sources.join(",")}` : "";
   return json<MarketAnswer>(
-    await fetch(apiUrl("/api/market/ask"), {
+    await fetch(apiUrl(`/api/market/ask${qs}`), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ text }),

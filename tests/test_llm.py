@@ -5,6 +5,8 @@ fallback keeps the locked demo running with no ANTHROPIC_API_KEY. These tests
 run fully offline with stub clients — the network and the model are never hit.
 """
 
+import pytest
+
 from livemeta.core import llm
 from tests import glp1_fixtures as demo
 from livemeta.core.schema import PICO, TrialCandidate
@@ -27,6 +29,8 @@ class _StubLLM:
             self._outer = outer
 
         def parse(self, **kwargs):
+            if isinstance(self._outer._raises, Exception):
+                raise self._outer._raises
             if self._outer._raises:
                 raise RuntimeError("model unavailable")
             return _StubParsed(self._outer._parsed)
@@ -107,3 +111,21 @@ def test_llm_failure_degrades_to_best_effort_without_raising():
     # Degrades rather than raising; still a usable Question with a PICO.
     assert q.pico.outcome
     assert q.trial_ids == []
+
+
+def test_out_of_credits_raises_rather_than_degrading():
+    # An exhausted-credits refusal is not a transient model hiccup: silently
+    # degrading would hand the user a garbage "Unspecified population" PICO with
+    # no hint why. Surface it as a typed error so the API can map it to a clear
+    # UI state. Mirrors the anthropic SDK's message for a 400 billing refusal.
+    billing = RuntimeError(
+        "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', "
+        "'message': 'Your credit balance is too low to access the Anthropic API. "
+        "Please go to Plans & Billing to upgrade or purchase credits.'}}"
+    )
+    with pytest.raises(llm.LlmCreditsError):
+        llm.parse_question(
+            "Do ACE inhibitors reduce stroke?",
+            llm_client=_StubLLM(raises=billing),
+            search_client=_StubSearch([]),
+        )

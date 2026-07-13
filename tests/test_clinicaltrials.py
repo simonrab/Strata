@@ -75,6 +75,31 @@ def test_fetch_study_honours_custom_base_url_for_proxying():
 
 
 @respx.mock
+def test_fetch_study_sends_proxy_token_when_configured():
+    # The clean-egress proxy is a public, unauthenticated endpoint unless a shared
+    # secret gates it. When CTGOV_PROXY_TOKEN is set, the client must present it as
+    # the x-proxy-token header so the proxy can reject anyone else's traffic.
+    study = {"protocolSection": {"identificationModule": {"nctId": "NCT1"}}}
+    route = respx.get(f"{BASE}/studies").mock(
+        return_value=httpx.Response(200, json={"studies": [study]})
+    )
+    ClinicalTrialsClient(proxy_token="s3cret").fetch_study("NCT1")
+    assert route.calls.last.request.headers.get("x-proxy-token") == "s3cret"
+
+
+@respx.mock
+def test_fetch_study_omits_proxy_token_header_by_default():
+    # With no shared secret configured, no token header is sent (direct CT.gov use
+    # and an unauthenticated proxy both keep working).
+    study = {"protocolSection": {"identificationModule": {"nctId": "NCT1"}}}
+    route = respx.get(f"{BASE}/studies").mock(
+        return_value=httpx.Response(200, json={"studies": [study]})
+    )
+    ClinicalTrialsClient(proxy_token=None).fetch_study("NCT1")
+    assert "x-proxy-token" not in route.calls.last.request.headers
+
+
+@respx.mock
 def test_search_studies_extracts_ids_and_titles():
     payload = {
         "studies": [

@@ -33,9 +33,20 @@ class ClinicalTrialsClient:
     # asked for. This set matches what the per-id endpoint returns by default.
     _STUDY_FIELDS = "protocolSection,resultsSection,derivedSection,hasResults"
 
-    def __init__(self, base_url: str = BASE_URL, timeout: float = 40.0):
+    def __init__(
+        self,
+        base_url: str = BASE_URL,
+        timeout: float = 40.0,
+        proxy_token: str | None = None,
+    ):
         self._base = base_url.rstrip("/")
         self._timeout = timeout
+        # When the clean-egress proxy is gated by a shared secret, present it so the
+        # proxy can reject anyone else's traffic. Falls back to CTGOV_PROXY_TOKEN in
+        # the environment; absent, no token header is sent (direct CT.gov use and an
+        # ungated proxy both keep working). Header name matches the proxy's check.
+        token = proxy_token if proxy_token is not None else os.environ.get("CTGOV_PROXY_TOKEN")
+        self._headers = {**_HEADERS, **({"x-proxy-token": token} if token else {})}
 
     def fetch_study(self, nct_id: str) -> dict:
         """Full study record (protocol + results) for one trial.
@@ -55,7 +66,7 @@ class ClinicalTrialsClient:
                 "fields": self._STUDY_FIELDS,
                 "pageSize": 10,
             },
-            headers=_HEADERS,
+            headers=self._headers,
             timeout=self._timeout,
         )
         resp.raise_for_status()
@@ -85,7 +96,7 @@ class ClinicalTrialsClient:
         resp = httpx.get(
             f"{self._base}/studies",
             params=params,
-            headers=_HEADERS,
+            headers=self._headers,
             timeout=self._timeout,
         )
         resp.raise_for_status()
@@ -127,7 +138,7 @@ class ClinicalTrialsClient:
         if with_results_only:
             params["aggFilters"] = "results:with"
         resp = httpx.get(
-            f"{self._base}/studies", params=params, headers=_HEADERS, timeout=self._timeout
+            f"{self._base}/studies", params=params, headers=self._headers, timeout=self._timeout
         )
         resp.raise_for_status()
         hits = []
@@ -172,7 +183,7 @@ class ClinicalTrialsClient:
                 "pageSize": page_size,
                 "fields": self._PIPELINE_FIELDS,
             },
-            headers=_HEADERS,
+            headers=self._headers,
             timeout=self._timeout,
         )
         resp.raise_for_status()
@@ -193,7 +204,7 @@ class ClinicalTrialsClient:
         resp = httpx.get(
             f"{self._base}/studies",
             params={param: value, "pageSize": page_size, "fields": self._DETAIL_FIELDS},
-            headers=_HEADERS,
+            headers=self._headers,
             timeout=self._timeout,
         )
         resp.raise_for_status()

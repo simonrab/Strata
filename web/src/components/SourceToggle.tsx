@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
 import type { Source } from "../lib/types";
-import { FREE_TEXT_SOURCES, SOURCE_LABEL, STRUCTURED_SOURCES } from "../lib/types";
+import { DEFAULT_SOURCES, FREE_TEXT_SOURCES, SOURCE_LABEL, STRUCTURED_SOURCES } from "../lib/types";
 import { Icon } from "./Icon";
 
 const KEY = "livemeta.sources";
 
-// Persisted source selection. Authoritative (CT.gov / PubMed / openFDA) default
-// on; free-text (announcements / filings) default off. The user opts in to the
-// unverified, Claude-read sources.
+// Persisted source selection. ClinicalTrials.gov is the default; PubMed, openFDA,
+// and the free-text sources (announcements / filings) are all opt-in, so the user
+// deliberately adds the wider, unpooled, or regulatory sources.
 export function loadSources(): Source[] {
   try {
     const raw = localStorage.getItem(KEY);
@@ -15,7 +15,7 @@ export function loadSources(): Source[] {
   } catch {
     /* ignore */
   }
-  return [...STRUCTURED_SOURCES];
+  return [...DEFAULT_SOURCES];
 }
 
 export function SourceToggle({

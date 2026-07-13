@@ -444,11 +444,15 @@ export interface CompanyPipeline {
 
 export type Source = "ctgov" | "pubmed" | "openfda" | "announcement" | "filing";
 
-// openFDA is intentionally omitted: the approvals lookups were surfacing
-// inaccurate data, so the source is disabled (backend returns no client) and
-// hidden from the picker. Re-add "openfda" here to restore it.
-export const STRUCTURED_SOURCES: Source[] = ["ctgov", "pubmed"];
+// The structured sources shown in the picker. ClinicalTrials.gov is always on;
+// PubMed (Europe PMC) and openFDA are available but opt-in — see DEFAULT_SOURCES.
+export const STRUCTURED_SOURCES: Source[] = ["ctgov", "pubmed", "openfda"];
 export const FREE_TEXT_SOURCES: Source[] = ["announcement", "filing"];
+
+// The default selection: ClinicalTrials.gov only. PubMed and openFDA start off
+// and are opted into per request (the backend provisions their clients only when
+// they are named), so a run never silently pulls in unpooled or regulatory data.
+export const DEFAULT_SOURCES: Source[] = ["ctgov"];
 
 export const SOURCE_LABEL: Record<Source, string> = {
   ctgov: "ClinicalTrials.gov",

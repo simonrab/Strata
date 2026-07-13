@@ -196,6 +196,28 @@ class Source(str, Enum):
 STRUCTURED_SOURCES = frozenset({Source.CTGOV, Source.PUBMED, Source.OPENFDA})
 FREE_TEXT_SOURCES = frozenset({Source.ANNOUNCEMENT, Source.FILING})
 
+# Sources that are available but off unless a caller names them. ClinicalTrials.gov
+# is always on; PubMed (Europe PMC) and openFDA are opt-in per request — a live
+# client for either is provisioned only when the source is *explicitly* selected,
+# never by the structured-trio default. Keeps every run CT.gov-only unless the
+# user asks for more.
+OPT_IN_SOURCES = frozenset({Source.PUBMED, Source.OPENFDA})
+
+
+def explicitly_selected(param: str | None, source: Source | str) -> bool:
+    """Was `source` explicitly named in a raw ``sources=`` param?
+
+    Distinct from :meth:`SourceSelection.allows`: the default selection *allows*
+    the whole structured trio, but PubMed and openFDA stay off unless a caller
+    lists them by name. Front ends use this to decide whether to construct the
+    (optional) Europe PMC / openFDA client at all, so they remain opt-in.
+    """
+    if not param:
+        return False
+    wanted = source.value if isinstance(source, Source) else str(source).strip().lower()
+    tokens = {t.strip().lower() for t in param.split(",")}
+    return wanted in tokens
+
 
 class SourceSelection(BaseModel):
     """Which sources the platform is allowed to use. Default: structured only.

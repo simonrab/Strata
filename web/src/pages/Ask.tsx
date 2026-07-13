@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useReview } from "../lib/review";
-import { parseQuestion } from "../lib/api";
+import { ApiError, parseQuestion } from "../lib/api";
 import { Icon } from "../components/Icon";
-import type { Question } from "../lib/types";
+import { SourceToggle, loadSources } from "../components/SourceToggle";
+import type { Question, Source } from "../lib/types";
 
 const PICO_FIELDS = [
   ["population", "Population"],
@@ -30,14 +31,25 @@ export function Ask() {
   const [parsed, setParsed] = useState<Question | null>(null);
   const [parsing, setParsing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [sources, setSources] = useState<Source[]>(loadSources());
 
   const parse = async () => {
     setParsing(true);
     setError(null);
     try {
       setParsed(await parseQuestion(text));
-    } catch {
-      setError("Could not parse the question. Is the backend running on :8000?");
+    } catch (err) {
+      setParsed(null);
+      if (
+        err instanceof ApiError &&
+        (err.code === "llm_credits_exhausted" || err.status === 402)
+      ) {
+        setError(
+          "Strata is out of Claude API credits, so the question can't be parsed right now. Top up the Anthropic account, then try again."
+        );
+      } else {
+        setError("Could not parse the question. Is the backend running on :8000?");
+      }
     } finally {
       setParsing(false);
     }
@@ -50,7 +62,7 @@ export function Ask() {
 
   const run = () => {
     if (!parsed) return;
-    start(parsed);
+    start(parsed, sources);
     navigate("/run");
   };
 
@@ -96,7 +108,13 @@ export function Ask() {
           research tool, not medical advice.
         </p>
         {error && (
-          <p className="mt-2 font-mono text-[12px] text-risk-high">{error}</p>
+          <div
+            role="alert"
+            className="mt-3 flex items-start gap-2 rounded-md border border-risk-high/40 bg-risk-high-container px-3 py-2.5 text-left"
+          >
+            <Icon name="error" size={16} className="mt-0.5 shrink-0 text-risk-high" />
+            <p className="text-[13px] leading-5 text-risk-high">{error}</p>
+          </div>
         )}
       </div>
 
@@ -143,6 +161,7 @@ export function Ask() {
                 </option>
               ))}
             </select>
+            <SourceToggle value={sources} onChange={setSources} />
             <button
               onClick={run}
               className="ml-auto inline-flex items-center gap-1.5 rounded-sm bg-ink-light px-5 py-2 text-[13px] font-medium text-canvas-light hover:opacity-90"

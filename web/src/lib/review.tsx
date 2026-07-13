@@ -7,7 +7,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import type { PipelineEvent, Question, ReviewResult } from "./types";
+import type { PipelineEvent, Question, ReviewResult, Source } from "./types";
 
 type Status = "idle" | "running" | "done" | "error";
 
@@ -16,7 +16,7 @@ interface ReviewState {
   events: PipelineEvent[];
   result: ReviewResult | null;
   runningId: string | null;
-  start: (question: Question) => void;
+  start: (question: Question, sources?: Source[]) => void;
   reset: () => void;
 }
 
@@ -48,13 +48,16 @@ export function ReviewProvider({ children }: { children: ReactNode }) {
     setResult(null);
   }, []);
 
-  const start = useCallback((q: Question) => {
+  const start = useCallback((q: Question, sources?: Source[]) => {
     setEvents([]);
     setResult(null);
     setStatus("running");
     setRunningId(q.id);
 
-    const socket = new WebSocket(wsUrl("/ws/review"));
+    // PubMed discovery is opt-in: the backend widens the search to Europe PMC
+    // only when `pubmed` is named in the ws query string.
+    const qs = sources && sources.length ? `?sources=${sources.join(",")}` : "";
+    const socket = new WebSocket(wsUrl(`/ws/review${qs}`));
     socketRef.current = socket;
 
     socket.onopen = () => socket.send(JSON.stringify({ question: q }));

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { getCompanyPipeline } from "../lib/api";
-import type { CompanyPipeline as Pipeline } from "../lib/types";
+import type { CompanyPipeline as Pipeline, Source } from "../lib/types";
 import { Icon } from "../components/Icon";
 import {
   AsOfSlider,
@@ -10,6 +10,7 @@ import {
   PipelineBoard,
 } from "../components/PipelineBoard";
 import { LoadingState } from "../components/Loading";
+import { SourceToggle, loadSources } from "../components/SourceToggle";
 
 function Stat({ value, label }: { value: number; label: string }) {
   return (
@@ -25,6 +26,7 @@ export function CompanyPipeline() {
   const sponsor = decodeURIComponent(name);
   const [year, setYear] = useState(MAX_YEAR);
   const [indication, setIndication] = useState<string | null>(null);
+  const [sources, setSources] = useState<Source[]>(loadSources());
   const [pipeline, setPipeline] = useState<Pipeline | null>(null);
   const [error, setError] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -34,7 +36,7 @@ export function CompanyPipeline() {
   useEffect(() => {
     setLoading(true);
     setIndication(null);
-    getCompanyPipeline(name, asOf)
+    getCompanyPipeline(name, asOf, sources)
       .then((p) => {
         setPipeline(p);
         setError(false);
@@ -42,7 +44,7 @@ export function CompanyPipeline() {
       .catch(() => setError(true))
       .finally(() => setLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [name, year]);
+  }, [name, year, sources]);
 
   // Indications that actually have a cell, so the filter never offers an empty one.
   const indications = useMemo(() => {
@@ -62,8 +64,13 @@ export function CompanyPipeline() {
         <Icon name="chevron_left" size={14} /> Landscape
       </Link>
 
-      <h1 className="font-sans text-display-lg text-ink-light">{sponsor}</h1>
-      <p className="mt-1 font-serif text-[16px] text-ink-muted-light">The pipeline.</p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="font-sans text-display-lg text-ink-light">{sponsor}</h1>
+          <p className="mt-1 font-serif text-[16px] text-ink-muted-light">The pipeline.</p>
+        </div>
+        <SourceToggle value={sources} onChange={setSources} />
+      </div>
 
       {pipeline && pipeline.assets.length > 0 && (
         <div className="mt-5 flex flex-wrap gap-3">

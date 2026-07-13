@@ -73,7 +73,7 @@ describe("CompanyPipeline", () => {
 
     // The decoded sponsor name is the heading, and the page fetched by it.
     expect(await screen.findByRole("heading", { name: "Novo Nordisk" })).toBeInTheDocument();
-    expect(getCompanyPipeline).toHaveBeenCalledWith(expect.anything(), null);
+    expect(getCompanyPipeline).toHaveBeenCalledWith(expect.anything(), null, ["ctgov"]);
 
     // The same asset appears in two different phase columns (one per indication).
     const phase3 = screen.getByTestId("phase-col-phase_3");
@@ -112,7 +112,7 @@ describe("CompanyPipeline", () => {
 
     fireEvent.change(screen.getByLabelText("as of year"), { target: { value: "2015" } });
     await waitFor(() =>
-      expect(getCompanyPipeline).toHaveBeenCalledWith(expect.anything(), "2015-12-31")
+      expect(getCompanyPipeline).toHaveBeenCalledWith(expect.anything(), "2015-12-31", ["ctgov"])
     );
   });
 });

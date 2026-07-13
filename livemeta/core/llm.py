@@ -5,7 +5,9 @@ into PICO — it never computes anything. Every question, including the GLP-1 MA
 demo, goes through the same live parse: nothing is hardcoded or short-circuited.
 Any model/parse failure degrades to a best-effort fallback rather than raising,
 so the pipeline never dies on a bad parse — but note the demo's PICO then depends
-on the model being reachable, since there is no curated substitute.
+on the model being reachable, since there is no curated substitute. The one
+exception is an out-of-credits refusal, which raises `LlmCreditsError` so the
+front ends can show the real cause instead of a silently degraded PICO.
 """
 
 from __future__ import annotations
@@ -21,6 +23,26 @@ from .schema import PICO, EffectMeasure, Question
 # (parse PICO, read a trial, judge a domain) — none touch the math — so the fast,
 # cheap model fits. Override for quality or testing with LIVEMETA_LLM_MODEL.
 _DEFAULT_MODEL = "claude-haiku-4-5-20251001"
+
+class LlmCreditsError(RuntimeError):
+    """The Anthropic API refused the call because the account is out of credits.
+
+    Unlike a transient model failure, degrading to the best-effort parse here
+    would hand the user a meaningless PICO with no hint why — so this one case
+    surfaces as an error for the front ends to display honestly.
+    """
+
+
+# Substrings the anthropic SDK puts in a billing refusal (HTTP 400,
+# invalid_request_error: "Your credit balance is too low to access the
+# Anthropic API...").
+_CREDIT_ERROR_MARKERS = ("credit balance", "insufficient credit")
+
+
+def _is_credit_error(exc: Exception) -> bool:
+    message = str(exc).lower()
+    return any(marker in message for marker in _CREDIT_ERROR_MARKERS)
+
 
 _SYSTEM_HINT = (
     "You structure a clinician's question into PICO for a meta-analysis. "
@@ -110,7 +132,12 @@ def parse_question(
     if client is not None:
         try:
             parsed = _llm_parse(text, client)
-        except Exception:
+        except Exception as exc:
+            if _is_credit_error(exc):
+                raise LlmCreditsError(
+                    "The Anthropic API account is out of credits, so the "
+                    "question could not be parsed."
+                ) from exc
             parsed = _fallback_parse(text)
     else:
         parsed = _fallback_parse(text)

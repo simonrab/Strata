@@ -19,7 +19,7 @@ Two other rules fall out of this. Every extracted value and every risk-of-bias j
 ## The pipeline
 
 1. Parse the question into PICO and one outcome (the LLM).
-2. Retrieve candidate trials from [ClinicalTrials.gov v2](https://clinicaltrials.gov/data-api/api), supplemented by [Europe PMC](https://europepmc.org/RestfulWebService).
+2. Retrieve candidate trials from [ClinicalTrials.gov v2](https://clinicaltrials.gov/data-api/api). [PubMed / Europe PMC](https://europepmc.org/RestfulWebService) and [openFDA](https://open.fda.gov/) approvals are available as opt-in sources (off by default), named per request; PubMed records surface for review but never enter the pool, since only CT.gov's structured results are pooled.
 3. Extract arm-level effect data into a fixed schema: events and totals per arm for binary outcomes, mean, SD, and n for continuous. There is no back-calculation. A missing value returns null and flags the trial.
 4. Validate deterministically.
 5. Appraise each trial with RoB 2 across its five domains, with a quote behind each judgment, and rate certainty with GRADE. The LLM reads first; a human confirms the calls that matter.
@@ -31,7 +31,7 @@ Two other rules fall out of this. Every extracted value and every risk-of-bias j
 
 There are three front ends over one core:
 
-- An MCP server (`livemeta/mcp/server.py`) exposing 19 tools, so Claude can drive the whole workflow over stdio.
+- An MCP server (`livemeta/mcp/server.py`) exposing 25 tools, so Claude can drive the whole workflow over stdio.
 - A web platform: a FastAPI backend (`livemeta/api/app.py`) serving a React and Vite front end (`web/`). It runs a review end to end: ask a question, watch the pipeline run, inspect the evidence ledger, verify extractions, review risk of bias and GRADE, read the report, and see the competitive-landscape board.
 - A command-line interface (`livemeta/cli/`, the `livemeta` command). Full parity with the other two: run a review, read the report with an ASCII forest plot, search, list history, drive the living update, and record every human-in-the-loop decision — all scriptable and runnable fully offline against recorded fixtures.
 
@@ -40,7 +40,7 @@ The product is called Strata, but the codebase still uses the earlier `livemeta`
 ```
 livemeta/
 ├── core/            # the engine
-│   ├── search.py        # trial retrieval (CT.gov v2, Europe PMC)
+│   ├── search.py        # trial retrieval (CT.gov v2; opt-in Europe PMC)
 │   ├── extract.py       # arm-level extraction with provenance
 │   ├── validate.py      # deterministic validation gate
 │   ├── homogeneity.py   # clinical-diversity gate before pooling
@@ -53,7 +53,7 @@ livemeta/
 │   ├── ci/              # competitive-intelligence landscape layer
 │   ├── store.py         # snapshot store (SQLite)
 │   └── store_pg.py      # Postgres store (deployed)
-├── mcp/server.py    # 19 MCP tools
+├── mcp/server.py    # 25 MCP tools
 ├── api/app.py       # FastAPI backend + websocket pipeline events
 └── cli/             # the `livemeta` command line (argparse over the same core)
 
@@ -61,7 +61,7 @@ web/                 # React + TypeScript + Vite front end
 tests/               # pytest + pytest-bdd (Gherkin .feature scenarios)
 ```
 
-### The 19 MCP tools
+### The 25 MCP tools
 
 | Group | Tools |
 |---|---|
@@ -70,7 +70,10 @@ tests/               # pytest + pytest-bdd (Gherkin .feature scenarios)
 | Appraisal | `assess_rob`, `grade_outcome` |
 | Sensitivity & review | `leave_one_out`, `run_review`, `confirm_diversity`, `record_decision` |
 | Living layer | `update`, `check_updates` |
-| Competitive landscape | `map_landscape`, `track_asset`, `ingest_announcement`, `asset_dossier`, `indication_map` |
+| Competitive landscape | `map_landscape`, `track_asset`, `ingest_announcement`, `asset_dossier`, `indication_map`, `company_pipeline` |
+| Market intelligence | `landscape_changes`, `milestone_radar`, `moa_landscape`, `compare_assets`, `market_ask` |
+
+`search_trials`, `run_review`, and the market/company tools take an optional `sources` argument (comma list, e.g. `ctgov,pubmed,openfda`) to opt into PubMed discovery or openFDA approvals per call.
 
 ## Statistics
 
@@ -151,11 +154,14 @@ Register it with an MCP client (for example, Claude Code):
 The `livemeta` command runs the whole review from the terminal over the same core as the web app and the MCP server. It works fully offline against the recorded CT.gov fixtures — pass `--fixtures tests/fixtures` (which implies `--offline`) so no run touches the network.
 
 ```bash
-# Run the locked GLP-1/MACE demo and read the report (with an ASCII forest plot)
-livemeta run --demo --fixtures tests/fixtures
+# Run the GLP-1/MACE question and read the report (with an ASCII forest plot).
+# The run prints the question id it saved under; use that id in the commands below.
+livemeta run --question-text "GLP-1 receptor agonists vs placebo for 3-point MACE" --fixtures tests/fixtures
 
-# Seed the 7-trial baseline, then inject the 8th trial and see the conclusion diff
-livemeta seed-demo --fixtures tests/fixtures
+# Opt in to PubMed discovery (records surface for review, never enter the pool)
+livemeta run --question-text "GLP-1 receptor agonists vs placebo for 3-point MACE" --enable-pubmed
+
+# Inject another trial into a saved review and see the conclusion diff
 livemeta update glp1-mace NCT03496298 --fixtures tests/fixtures
 
 # Read a saved review and also write a matplotlib forest-plot PNG
@@ -166,10 +172,10 @@ livemeta decision glp1-mace NCT01147250 flagged --reason "unclear arm"
 livemeta rob-decision glp1-mace NCT01179048 D1
 
 # Machine-readable output for scripting (a single JSON document on stdout)
-livemeta run --demo --fixtures tests/fixtures --json | python -m json.tool
+livemeta run --question-text "GLP-1 receptor agonists vs placebo for 3-point MACE" --fixtures tests/fixtures --json | python -m json.tool
 ```
 
-Every subcommand accepts `--json`. Exit codes are scriptable: `0` success (a pooled estimate was produced or a read succeeded), `4` honest abstention (the run completed but the data was too thin or too heterogeneous to pool), and `5` for an unknown review. Without `ANTHROPIC_API_KEY`, the LLM steps are reported as PENDING rather than fabricated, exactly as in the web app. Run `livemeta --help` for the full command list.
+Every subcommand accepts `--json`. Discovery is ClinicalTrials.gov by default; `--enable-pubmed` widens it to Europe PMC (opt-in). Exit codes are scriptable: `0` success (a pooled estimate was produced or a read succeeded), `4` honest abstention (the run completed but the data was too thin or too heterogeneous to pool), and `5` for an unknown review. Without `ANTHROPIC_API_KEY`, the LLM steps are reported as PENDING rather than fabricated, exactly as in the web app. Run `livemeta --help` for the full command list.
 
 ## Testing
 

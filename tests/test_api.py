@@ -146,6 +146,31 @@ def test_parse_endpoint_returns_a_question():
     assert body["trial_ids"] == ["NCT00000001"]
 
 
+def test_parse_endpoint_maps_credit_exhaustion_to_402():
+    # When Anthropic refuses the parse because the account is out of credits, the
+    # API answers 402 with a machine-readable code so the UI can show the state
+    # instead of a silently degraded PICO.
+    from livemeta.core import llm as llm_mod
+
+    def _credit_parse():
+        def parse(text: str) -> Question:
+            raise llm_mod.LlmCreditsError(
+                "The Anthropic API account is out of credits."
+            )
+
+        return parse
+
+    app.dependency_overrides[get_parse] = _credit_parse
+    try:
+        r = client.post("/api/parse", json={"text": "novel question?"})
+    finally:
+        app.dependency_overrides.pop(get_parse, None)
+    assert r.status_code == 402
+    detail = r.json()["detail"]
+    assert detail["code"] == "llm_credits_exhausted"
+    assert "credits" in detail["message"].lower()
+
+
 def _demo_review():
     from livemeta.core.pipeline import run_review_collect
 

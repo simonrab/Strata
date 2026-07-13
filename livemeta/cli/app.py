@@ -148,8 +148,18 @@ def _cmd_run(args, *, store, fetch_study, parse, search_client) -> int:
     question = parse(args.question_text)
     # A question with no trial_ids is discovered live through the injected search
     # client; one that already carries candidates skips straight to extraction.
+    # PubMed (Europe PMC) is opt-in via --enable-pubmed and only widens discovery:
+    # those records flag at extraction, so the pooled estimate stays CT.gov-only.
+    epmc_client = None
+    if getattr(args, "enable_pubmed", False) and not args.offline and not args.fixtures:
+        from ..core.sources.europepmc import EuropePmcClient
+
+        epmc_client = EuropePmcClient()
     search_fn = lambda pico: [
-        c.nct_id for c in search_mod.search_trials(pico, client=search_client)
+        c.nct_id
+        for c in search_mod.search_trials(
+            pico, client=search_client, epmc_client=epmc_client
+        )
     ]
 
     final: ReviewResult | None = None
@@ -388,6 +398,16 @@ def build_parser() -> argparse.ArgumentParser:
     parent.add_argument("--offline", action="store_true", help="Do not hit the network.")
     parent.add_argument("--fixtures", help="Read CT.gov JSON from DIR (implies --offline).")
     parent.add_argument("--quiet", action="store_true", help="Suppress progress on stderr.")
+    parent.add_argument(
+        "--enable-pubmed",
+        action="store_true",
+        help="Opt in to PubMed / Europe PMC discovery (records flag for review, not pooled).",
+    )
+    parent.add_argument(
+        "--enable-fda",
+        action="store_true",
+        help="Opt in to openFDA approvals (market lenses only; no effect on the review pipeline).",
+    )
 
     parser = argparse.ArgumentParser(
         prog="livemeta",

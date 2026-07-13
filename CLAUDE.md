@@ -41,13 +41,15 @@ MCP tools:
 - `update(question_id, new_trial)`: re-run and diff against the previous result.
 
 ## Data sources
-- ClinicalTrials.gov v2 API (https://clinicaltrials.gov/data-api/api). Primary source. Returns structured arm-level results, which avoids PDF parsing.
-- Europe PMC REST API (https://europepmc.org/RestfulWebService) or PubMed. For published trials and abstracts.
+- ClinicalTrials.gov v2 API (https://clinicaltrials.gov/data-api/api). Primary source, always on. Returns structured arm-level results, which avoids PDF parsing.
+- Europe PMC REST API (https://europepmc.org/RestfulWebService) or PubMed. Opt-in, off by default. For published trials and abstracts; records surface for review but never enter the pool, since only CT.gov's structured results are pooled.
+- openFDA (https://open.fda.gov/) US drug approvals. Opt-in, off by default; feeds the market-intelligence layer only, never the pool.
+- A source is opt-in when a caller names it (`sources=ctgov,pubmed,openfda` per request, or `--enable-pubmed`/`--enable-fda` on the CLI); the live client for PubMed/openFDA is provisioned only then. See `explicitly_selected` in `livemeta/core/ci/schema.py`.
 - Full text only when structured effect data is absent.
 
 ## Pipeline
 1. Parse the question into PICO and one outcome. Claude does this.
-2. Retrieve candidate trials from ClinicalTrials.gov v2 first, supplemented by Europe PMC.
+2. Retrieve candidate trials from ClinicalTrials.gov v2 by default; opt in to Europe PMC (PubMed) to also search the published literature.
 3. Extract effect data into a fixed schema. Binary outcomes: events and totals per arm. Continuous outcomes: mean, SD, n per arm. Every value carries the source trial ID and source snippet.
 4. Validate deterministically before any pooling.
 5. Assess risk of bias per trial with RoB 2, and rate certainty of evidence with GRADE (see Risk of bias and certainty below). Claude does a first-pass reading, a human confirms.
@@ -152,7 +154,7 @@ Surfaced with the same parity discipline as the core: REST endpoints under `/api
 - MCP Python SDK for the server.
 - Meta-analysis library: pooling runs through R `metafor` (REML + HKSJ) called over an `Rscript` subprocess bridge, not `rpy2` — this sidesteps the arm64-Python / x86-R architecture mismatch. A pure-Python `pymare` REML path is the fallback, and the two are cross-validated in tests; select with `LIVEMETA_STATS_ENGINE`. `statsmodels.stats.meta_analysis` covers DerSimonian-Laird. Do not hand-roll pooling. `scipy` and `numpy` for support.
 - `matplotlib` for the forest plot.
-- `httpx` or `requests` for the ClinicalTrials.gov and Europe PMC APIs.
+- `httpx` or `requests` for the ClinicalTrials.gov, Europe PMC, and openFDA APIs.
 - A fully functioning web UI platform for the front end, built against the reference designs in `stitch_livemeta_precision_evidence_system/`.
 
 ## Demo plan
