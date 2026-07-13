@@ -154,25 +154,25 @@ Register it with an MCP client (for example, Claude Code):
 The `livemeta` command runs the whole review from the terminal over the same core as the web app and the MCP server. It works fully offline against the recorded CT.gov fixtures — pass `--fixtures tests/fixtures` (which implies `--offline`) so no run touches the network.
 
 ```bash
-# Run the GLP-1/MACE question and read the report (with an ASCII forest plot).
+# Run the question and read the report (with an ASCII forest plot).
 # The run prints the question id it saved under; use that id in the commands below.
-livemeta run --question-text "GLP-1 receptor agonists vs placebo for 3-point MACE" --fixtures tests/fixtures
+livemeta run --question-text "Question" --fixtures tests/fixtures
 
 # Opt in to PubMed discovery (records surface for review, never enter the pool)
-livemeta run --question-text "GLP-1 receptor agonists vs placebo for 3-point MACE" --enable-pubmed
+livemeta run --question-text "Question" --enable-pubmed
 
 # Inject another trial into a saved review and see the conclusion diff
-livemeta update glp1-mace NCT03496298 --fixtures tests/fixtures
+livemeta update review-name NCT... --fixtures tests/fixtures
 
 # Read a saved review and also write a matplotlib forest-plot PNG
-livemeta report glp1-mace --plot forest.png
+livemeta report review-name --plot forest.png
 
 # Human-in-the-loop: flag a trial's extraction and re-pool; confirm a RoB domain
-livemeta decision glp1-mace NCT01147250 flagged --reason "unclear arm"
-livemeta rob-decision glp1-mace NCT01179048 D1
+livemeta decision review-name NCT... flagged --reason "unclear arm"
+livemeta rob-decision review-name NCT... D1
 
 # Machine-readable output for scripting (a single JSON document on stdout)
-livemeta run --question-text "GLP-1 receptor agonists vs placebo for 3-point MACE" --fixtures tests/fixtures --json | python -m json.tool
+livemeta run --question-text "Question" --fixtures tests/fixtures --json | python -m json.tool
 ```
 
 Every subcommand accepts `--json`. Discovery is ClinicalTrials.gov by default; `--enable-pubmed` widens it to Europe PMC (opt-in). Exit codes are scriptable: `0` success (a pooled estimate was produced or a read succeeded), `4` honest abstention (the run completed but the data was too thin or too heterogeneous to pool), and `5` for an unknown review. Without `ANTHROPIC_API_KEY`, the LLM steps are reported as PENDING rather than fabricated, exactly as in the web app. Run `livemeta --help` for the full command list.
