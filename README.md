@@ -50,7 +50,7 @@ livemeta/
 │   ├── prisma.py        # PRISMA record-flow
 │   ├── living.py        # re-run + diff when a new trial lands
 │   ├── diff.py          # version-to-version conclusion diff
-│   ├── ci/              # competitive-intelligence landscape layer
+│   ├── ci/              # market-intelligence landscape layer
 │   ├── store.py         # snapshot store (SQLite)
 │   └── store_pg.py      # Postgres store (deployed)
 ├── mcp/server.py    # 25 MCP tools
@@ -70,7 +70,7 @@ tests/               # pytest + pytest-bdd (Gherkin .feature scenarios)
 | Appraisal | `assess_rob`, `grade_outcome` |
 | Sensitivity & review | `leave_one_out`, `run_review`, `confirm_diversity`, `record_decision` |
 | Living layer | `update`, `check_updates` |
-| Competitive landscape | `map_landscape`, `track_asset`, `ingest_announcement`, `asset_dossier`, `indication_map`, `company_pipeline` |
+| Trial landscape | `map_landscape`, `track_asset`, `ingest_announcement`, `asset_dossier`, `indication_map`, `company_pipeline` |
 | Market intelligence | `landscape_changes`, `milestone_radar`, `moa_landscape`, `compare_assets`, `market_ask` |
 
 `search_trials`, `run_review`, and the market/company tools take an optional `sources` argument (comma list, e.g. `ctgov,pubmed,openfda`) to opt into PubMed discovery or openFDA approvals per call.
