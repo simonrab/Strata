@@ -188,9 +188,8 @@ npm --prefix web run test    # frontend: Vitest + React Testing Library
 
 Feature files are in `tests/features/` (pipeline, homogeneity, appraisal, human review, living update, MCP update, CLI).
 
+When a trial only reports an outcome in a form the tool can't read, it routes it to manual review instead of guessing.
 ## Scope
 
-In scope: structured arm-level results; RoB 2 and GRADE appraisal; random-effects pooling with sensitivity checks; the living re-run and diff; the competitive landscape.
-
-Out of scope for now: reading effect sizes off figures such as Kaplan-Meier curves, time-to-event reconstruction, subgroup analysis, meta-regression, and network meta-analysis. When a trial only reports an outcome in a form the tool can't read, it routes it to manual review instead of guessing.
+Out of scope for now: reading effect sizes off figures such as Kaplan-Meier curves, time-to-event reconstruction, subgroup analysis, meta-regression, and network meta-analysis.
 
