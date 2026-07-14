@@ -1,4 +1,4 @@
-# Strata (Work in Progress)
+# Strata 
 
 Strata is a living meta-analysis tool. You ask a clinical question in PICO form, and it finds the trials, extracts the effect data, appraises it, and pools it into one answer: an effect estimate with a confidence interval, a forest plot, heterogeneity measures, and a plain-language summary. Every number links back to the trial and the snippet it came from. When a new trial reads out, Strata re-runs and tells you whether the estimate or the conclusion changed.
 
